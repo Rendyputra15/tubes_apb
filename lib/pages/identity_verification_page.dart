@@ -7,72 +7,82 @@ class IdentityVerificationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Column(
           children: [
             const AppHeader(
               title: 'Verifikasi',
-              subtitle: 'Status verifikasi identitas pengguna',
-              icon: Icons.verified_user,
+              subtitle: 'Status verifikasi identitas akun',
+              icon: Icons.verified_user_outlined,
               showBackButton: true,
             ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(22),
                 ),
                 child: Column(
                   children: [
                     const CircleAvatar(
-                      radius: 34,
+                      radius: 36,
                       backgroundColor: Colors.orange,
                       child: Icon(
-                        Icons.pending_actions,
+                        Icons.pending_actions_outlined,
+                        size: 34,
                         color: Colors.white,
-                        size: 32,
                       ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
                       'Status Verifikasi',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Identitas kamu masih dalam proses pengecekan oleh admin.',
+                      'Akun kamu saat ini belum terverifikasi penuh. Verifikasi diperlukan agar proses pinjam ruangan menjadi lebih cepat.',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF5E5),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        'Status saat ini: Belum Terverifikasi',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 52,
                       child: ElevatedButton(
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Data verifikasi sedang diproses.'),
+                              content: Text('Permintaan verifikasi sedang diproses.'),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E88E5),
+                          backgroundColor: const Color(0xFFD32F2F),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         child: const Text('Cek Status'),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import 'loan_page.dart';
+import 'notification_page.dart';
 import 'profile_page.dart';
-import 'schedule_page.dart';
+import 'rooms_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -13,9 +15,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int currentIndex = 0;
 
-  final List<Widget> pages = const [
+  final pages = const [
     HomePage(),
-    SchedulePage(),
+    RoomsPage(),
+    LoanPage(),
+    NotificationPage(),
     ProfilePage(),
   ];
 
@@ -28,8 +32,10 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
-        selectedItemColor: const Color.fromARGB(255, 245, 42, 42),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFFD32F2F),
         unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
         onTap: (index) {
           setState(() {
             currentIndex = index;
@@ -41,8 +47,16 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Beranda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Jadwal',
+            icon: Icon(Icons.meeting_room_outlined),
+            label: 'Ruangan',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined),
+            label: 'Pinjam',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_none_outlined),
+            label: 'Notifikasi',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

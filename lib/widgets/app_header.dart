@@ -19,18 +19,23 @@ class AppHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: [
-            Color(0xFFD32F2F), // merah tua (lebih kalem)
-            Color(0xFFF44336), // merah terang
+            Color(0xFFD32F2F),
+            Color(0xFFF44336),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(28),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(30),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,8 +44,8 @@ class AppHeader extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
                 onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: 42,
                   height: 42,
@@ -59,40 +64,25 @@ class AppHeader extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 28,
-                ),
+                child: Icon(icon, color: Colors.white, size: 30),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ShaderMask(
-                      shaderCallback: (bounds) {
-                        return const LinearGradient(
-                          colors: [
-                            Colors.white,
-                            Color(0xFFE3F2FD),
-                          ],
-                        ).createShader(bounds);
-                      },
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: Colors.white,
-                        ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -101,7 +91,6 @@ class AppHeader extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
