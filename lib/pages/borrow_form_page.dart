@@ -45,9 +45,6 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     selectedRoom = widget.room.status == 'Tersedia'
         ? widget.room
         : availableRooms.first;
-
-    selectedSchedule =
-        selectedRoom.schedules.isNotEmpty ? selectedRoom.schedules.first : null;
   }
 
   @override
@@ -62,6 +59,35 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     return '${date.day}-${date.month}-${date.year}';
   }
 
+  String getDayName(DateTime date) {
+    switch (date.weekday) {
+      case DateTime.monday:
+        return 'Senin';
+      case DateTime.tuesday:
+        return 'Selasa';
+      case DateTime.wednesday:
+        return 'Rabu';
+      case DateTime.thursday:
+        return 'Kamis';
+      case DateTime.friday:
+        return 'Jumat';
+      case DateTime.saturday:
+        return 'Sabtu';
+      case DateTime.sunday:
+        return 'Minggu';
+      default:
+        return '-';
+    }
+  }
+
+  List<String> getAvailableSchedulesForSelectedDate() {
+    if (selectedDate == null) return [];
+
+    final dayName = getDayName(selectedDate!);
+
+    return selectedRoom.availableSchedules[dayName] ?? [];
+  }
+
   Future<void> pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -73,8 +99,15 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     if (picked != null) {
       setState(() {
         selectedDate = picked;
+        final schedules = getAvailableSchedulesForDate(picked);
+        selectedSchedule = schedules.isNotEmpty ? schedules.first : null;
       });
     }
+  }
+
+  List<String> getAvailableSchedulesForDate(DateTime date) {
+    final dayName = getDayName(date);
+    return selectedRoom.availableSchedules[dayName] ?? [];
   }
 
   Future<void> pickKtm() async {
@@ -149,19 +182,6 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     );
   }
 
-  Widget sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
   Widget inputBox({
     required String title,
     required Widget child,
@@ -170,7 +190,14 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        sectionLabel(title),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
         child,
         if (helper != null) ...[
           const SizedBox(height: 6),
@@ -330,6 +357,50 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     );
   }
 
+  Widget scheduleSection() {
+    final schedules = getAvailableSchedulesForSelectedDate();
+
+    if (selectedDate == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Text(
+          'Pilih tanggal terlebih dahulu untuk melihat waktu yang tersedia.',
+          style: TextStyle(
+            color: Colors.black54,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    if (schedules.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE8EA),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          'Tidak ada waktu kosong untuk hari ${getDayName(selectedDate!)}. Silakan pilih tanggal lain.',
+          style: const TextStyle(
+            color: Color(0xFFE51C23),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      children: schedules.map((schedule) => scheduleChoice(schedule)).toList(),
+    );
+  }
+
   Widget summaryCard() {
     return Container(
       width: double.infinity,
@@ -352,6 +423,9 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
           Text('Ruangan: ${selectedRoom.name}'),
           Text(
             'Tanggal: ${selectedDate == null ? '-' : formatDate(selectedDate!)}',
+          ),
+          Text(
+            'Hari: ${selectedDate == null ? '-' : getDayName(selectedDate!)}',
           ),
           Text('Waktu: ${selectedSchedule ?? '-'}'),
           Text(
@@ -417,8 +491,8 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
 
                   setState(() {
                     selectedRoom = room;
-                    selectedSchedule =
-                        room.schedules.isNotEmpty ? room.schedules.first : null;
+                    selectedDate = null;
+                    selectedSchedule = null;
                   });
                 },
               ),
@@ -442,7 +516,7 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
                         child: Text(
                           selectedDate == null
                               ? 'Pilih tanggal'
-                              : formatDate(selectedDate!),
+                              : '${formatDate(selectedDate!)} (${getDayName(selectedDate!)})',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -453,13 +527,10 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
               ),
             ),
             inputBox(
-              title: 'Pilih Waktu',
-              helper: 'Setiap ruangan memiliki pilihan waktu yang berbeda.',
-              child: Wrap(
-                children: selectedRoom.schedules
-                    .map((schedule) => scheduleChoice(schedule))
-                    .toList(),
-              ),
+              title: 'Pilih Waktu Tersedia',
+              helper:
+                  'Waktu tersedia menyesuaikan jadwal akademik ruangan pada hari yang dipilih.',
+              child: scheduleSection(),
             ),
             inputBox(
               title: 'Jumlah Peserta',

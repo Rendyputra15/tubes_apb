@@ -7,7 +7,9 @@ class Room {
   final String imageUrl;
   final List<String> facilities;
   final String description;
-  final List<String> schedules;
+
+  // Jadwal tersedia berdasarkan hari
+  final Map<String, List<String>> availableSchedules;
 
   Room({
     required this.name,
@@ -18,6 +20,6 @@ class Room {
     required this.imageUrl,
     required this.facilities,
     required this.description,
-    required this.schedules,
+    required this.availableSchedules,
   });
 }
