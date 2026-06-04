@@ -23,7 +23,6 @@ class RoomData {
     final List<String> statuses = [
       'Tersedia',
       'Tersedia',
-      'Cleaning',
       'Terpakai',
     ];
 

@@ -16,10 +16,12 @@ class RoomsPage extends StatefulWidget {
 class _RoomsPageState extends State<RoomsPage> {
   String selectedFilter = 'Semua';
 
+  final Color primaryRed = const Color(0xFFD32F2F);
+  final Color titleRed = const Color(0xFFE51C23);
+
   final List<String> filters = [
     'Semua',
     'Tersedia',
-    'Cleaning',
     'Terpakai',
   ];
 
@@ -37,12 +39,10 @@ class _RoomsPageState extends State<RoomsPage> {
     switch (filter) {
       case 'Tersedia':
         return Colors.green;
-      case 'Cleaning':
-        return Colors.orange;
       case 'Terpakai':
-        return Colors.red;
+        return primaryRed;
       default:
-        return const Color(0xFFE51C23);
+        return titleRed;
     }
   }
 

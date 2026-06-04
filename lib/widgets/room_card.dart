@@ -13,14 +13,15 @@ class RoomCard extends StatelessWidget {
     required this.onBorrowTap,
   });
 
+  static const Color primaryRed = Color(0xFFD32F2F);
+  static const Color titleRed = Color(0xFFE51C23);
+
   Color getStatusColor(String status) {
     switch (status) {
       case 'Tersedia':
         return Colors.green;
-      case 'Cleaning':
-        return Colors.orange;
-      case 'Dipakai':
-        return Colors.red;
+      case 'Terpakai':
+        return primaryRed;
       default:
         return Colors.grey;
     }
@@ -29,6 +30,7 @@ class RoomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = getStatusColor(room.status);
+    final bool isAvailable = room.status == 'Tersedia';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -67,7 +69,9 @@ class RoomCard extends StatelessWidget {
                   },
                 ),
               ),
+
               const SizedBox(width: 14),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,56 +83,95 @@ class RoomCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+
                     const SizedBox(height: 5),
-                    Text(room.location),
-                    const SizedBox(height: 5),
-                    Text('Kapasitas ${room.capacity} orang'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            room.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+
+                    Text(
+                      room.location,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      'Kapasitas ${room.capacity} orang',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        room.status,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 10),
+
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
                             onPressed: onDetailTap,
-                            child: const Text('Detail'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: titleRed,
+                              side: const BorderSide(
+                                color: titleRed,
+                                width: 1.3,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: const Text(
+                              'Detail',
+                              style: TextStyle(
+                                color: titleRed,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ),
+
                         const SizedBox(width: 8),
+
                         Expanded(
                           child: ElevatedButton(
-                            onPressed:
-                                room.status == 'Tersedia' ? onBorrowTap : null,
+                            onPressed: isAvailable ? onBorrowTap : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD32F2F),
+                              backgroundColor: primaryRed,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey.shade400,
+                              disabledForegroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                             ),
                             child: const Text(
                               'Pinjam',
                               style: TextStyle(
-                                color: Color(0xFFE51C23),
+                                color: Colors.white,
                                 fontWeight: FontWeight.w900,
                               ),
-                            )
+                            ),
                           ),
                         ),
                       ],

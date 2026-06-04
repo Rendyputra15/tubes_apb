@@ -8,6 +8,9 @@ import 'loan_history_page.dart';
 class LoanPage extends StatelessWidget {
   const LoanPage({super.key});
 
+  static const Color primaryRed = Color(0xFFD32F2F);
+  static const Color titleRed = Color(0xFFE51C23);
+
   @override
   Widget build(BuildContext context) {
     final latestLoan =
@@ -23,6 +26,7 @@ class LoanPage extends StatelessWidget {
               subtitle: 'Kelola proses peminjaman ruangan',
               icon: Icons.assignment_outlined,
             ),
+
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -50,7 +54,9 @@ class LoanPage extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+
                         const SizedBox(height: 10),
+
                         const Text(
                           'Pilih ruangan yang tersedia lalu lengkapi form peminjaman.',
                           style: TextStyle(
@@ -58,11 +64,13 @@ class LoanPage extends StatelessWidget {
                             height: 1.4,
                           ),
                         ),
+
                         const SizedBox(height: 18),
+
                         SizedBox(
                           width: double.infinity,
                           height: 50,
-                          child: ElevatedButton(
+                          child: OutlinedButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -73,20 +81,32 @@ class LoanPage extends StatelessWidget {
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(
+                            style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFFD32F2F),
+                              foregroundColor: titleRed,
+                              side: const BorderSide(
+                                color: Colors.white,
+                                width: 1.2,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            child: const Text('Mulai Peminjaman'),
+                            child: const Text(
+                              'Mulai Peminjaman',
+                              style: TextStyle(
+                                color: titleRed,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 18),
+
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
@@ -94,28 +114,47 @@ class LoanPage extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Alur Peminjaman',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 14),
+
+                        SizedBox(height: 14),
+
                         Row(
-                          children: const [
-                            Expanded(child: _StepItem(number: '1', text: 'Pilih Ruangan')),
-                            Expanded(child: _StepItem(number: '2', text: 'Isi Form')),
-                            Expanded(child: _StepItem(number: '3', text: 'Konfirmasi')),
+                          children: [
+                            Expanded(
+                              child: _StepItem(
+                                number: '1',
+                                text: 'Pilih Ruangan',
+                              ),
+                            ),
+                            Expanded(
+                              child: _StepItem(
+                                number: '2',
+                                text: 'Isi Form',
+                              ),
+                            ),
+                            Expanded(
+                              child: _StepItem(
+                                number: '3',
+                                text: 'Konfirmasi',
+                              ),
+                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 18),
+
                   if (latestLoan != null)
                     Container(
                       width: double.infinity,
@@ -134,7 +173,9 @@ class LoanPage extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                             ),
                           ),
+
                           const SizedBox(height: 14),
+
                           Text(
                             latestLoan.roomName,
                             style: const TextStyle(
@@ -142,11 +183,17 @@ class LoanPage extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+
                           const SizedBox(height: 6),
+
                           Text(latestLoan.dateText),
+
                           const SizedBox(height: 6),
+
                           Text('Status: ${latestLoan.status}'),
+
                           const SizedBox(height: 14),
+
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
@@ -158,13 +205,23 @@ class LoanPage extends StatelessWidget {
                                   ),
                                 );
                               },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: titleRed,
+                                side: const BorderSide(
+                                  color: titleRed,
+                                  width: 1.2,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
                               child: const Text(
                                 'Lihat Riwayat Pinjaman',
                                 style: TextStyle(
-                                  color: Color(0xFFE51C23),
+                                  color: titleRed,
                                   fontWeight: FontWeight.w900,
                                 ),
-                              )
+                              ),
                             ),
                           ),
                         ],
@@ -204,7 +261,9 @@ class _StepItem extends StatelessWidget {
             ),
           ),
         ),
+
         const SizedBox(height: 8),
+
         Text(
           text,
           textAlign: TextAlign.center,

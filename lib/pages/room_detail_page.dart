@@ -5,10 +5,7 @@ import 'borrow_form_page.dart';
 class RoomDetailPage extends StatelessWidget {
   final Room room;
 
-  const RoomDetailPage({
-    super.key,
-    required this.room,
-  });
+  const RoomDetailPage({super.key, required this.room});
 
   Color getStatusColor(String status) {
     switch (status) {
@@ -33,10 +30,7 @@ class RoomDetailPage extends StatelessWidget {
       ),
       child: Text(
         facility,
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
   }
@@ -60,10 +54,7 @@ class RoomDetailPage extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Detail Ruangan',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
@@ -88,17 +79,16 @@ class RoomDetailPage extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               room.name,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-              ),
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(14),
@@ -124,47 +114,30 @@ class RoomDetailPage extends StatelessWidget {
             const SizedBox(height: 18),
             const Text(
               'Lokasi',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             Text(
               room.location,
-              style: const TextStyle(
-                color: Colors.black54,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: Colors.black54, height: 1.5),
             ),
             const SizedBox(height: 18),
             const Text(
               'Deskripsi',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             Text(
               room.description,
-              style: const TextStyle(
-                color: Colors.black54,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: Colors.black54, height: 1.5),
             ),
             const SizedBox(height: 18),
             const Text(
               'Fasilitas',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 10),
-            Wrap(
-              children: room.facilities.map(facilityChip).toList(),
-            ),
+            Wrap(children: room.facilities.map(facilityChip).toList()),
             const SizedBox(height: 26),
             SizedBox(
               width: double.infinity,
@@ -182,7 +155,9 @@ class RoomDetailPage extends StatelessWidget {
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE51C23),
-                  disabledBackgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -190,6 +165,7 @@ class RoomDetailPage extends StatelessWidget {
                 child: const Text(
                   'Pinjam Sekarang',
                   style: TextStyle(
+                    color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
