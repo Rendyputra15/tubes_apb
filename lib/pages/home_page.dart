@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_apb/data/room_data.dart';
 import 'package:tubes_apb/models/room_model.dart';
-import 'package:tubes_apb/widgets/room_card.dart';
 import 'borrow_form_page.dart';
-import 'identity_verification_page.dart';
 import 'loan_history_page.dart';
-import 'notification_page.dart';
 import 'profile_page.dart';
 import 'room_detail_page.dart';
 import 'rooms_page.dart';
@@ -15,8 +12,35 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   static const Color primaryRed = Color(0xFFE51C23);
-  static const Color softRed = Color(0xFFFFE8EA);
   static const Color background = Color(0xFFF8F9FB);
+
+  Room? getFirstAvailableRoom() {
+    final availableRooms =
+        RoomData.allRooms.where((room) => room.status == 'Tersedia').toList();
+
+    if (availableRooms.isEmpty) return null;
+    return availableRooms.first;
+  }
+
+  void goToBorrowForm(BuildContext context) {
+    final room = getFirstAvailableRoom();
+
+    if (room == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada ruangan yang tersedia untuk dipinjam.'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BorrowFormPage(room: room),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +62,15 @@ class HomePage extends StatelessWidget {
               titleSpacing: 0,
               title: _buildStickyHeader(context),
             ),
-
             SliverList(
               delegate: SliverChildListDelegate(
                 [
                   const SizedBox(height: 16),
-                  _buildHeroCard(),
+                  _buildHeroCard(context),
                   const SizedBox(height: 24),
-
                   _sectionTitle('Fitur'),
                   const SizedBox(height: 12),
                   _buildFeaturePanel(context),
-
                   const SizedBox(height: 24),
                   _sectionTitleWithAction(
                     title: 'Ruang Terbaik & Rekomendasi',
@@ -57,16 +78,14 @@ class HomePage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RoomsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const RoomsPage(),
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 12),
                   _buildRecommendationList(context, recommendedRooms),
-
-                  const SizedBox(height: 22),
-                  _buildStatusCard(context),
-
                   const SizedBox(height: 28),
                 ],
               ),
@@ -157,163 +176,161 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard() {
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 18),
-    height: 230,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(28),
-      gradient: const LinearGradient(
-        colors: [
-          Color(0xFFFF3B45),
-          Color(0xFFE51C23),
-          Color(0xFFD90416),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: primaryRed.withOpacity(0.30),
-          blurRadius: 24,
-          offset: const Offset(0, 10),
+  Widget _buildHeroCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 18),
+      height: 230,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFF3B45),
+            Color(0xFFE51C23),
+            Color(0xFFD90416),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-      ],
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -35,
-            top: -30,
-            child: Container(
-              width: 145,
-              height: 145,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.10),
-              ),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryRed.withOpacity(0.30),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
-
-          Positioned(
-            right: 18,
-            bottom: 20,
-            child: Icon(
-              Icons.groups_rounded,
-              size: 110,
-              color: Colors.white.withOpacity(0.18),
-            ),
-          ),
-
-          Positioned(
-            right: 28,
-            top: 35,
-            child: Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.16),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.20),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -35,
+              top: -30,
+              child: Container(
+                width: 145,
+                height: 145,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.10),
                 ),
               ),
-              child: const Icon(
-                Icons.meeting_room_rounded,
-                color: Colors.white,
-                size: 36,
+            ),
+            Positioned(
+              right: 18,
+              bottom: 20,
+              child: Icon(
+                Icons.groups_rounded,
+                size: 110,
+                color: Colors.white.withOpacity(0.18),
               ),
             ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+            Positioned(
+              right: 28,
+              top: 35,
+              child: Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.20),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.meeting_room_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Text(
+                      'Hai, Dewa 👋',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                  child: const Text(
-                    'Hai, Dewa 👋',
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Temukan ruangan\nterbaik untuk\nkegiatanmu',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 25,
+                      height: 1.12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
                     ),
                   ),
-                ),
-
-                const SizedBox(height: 14),
-
-                const Text(
-                  'Temukan ruangan\nterbaik untuk\nkegiatanmu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    height: 1.12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
+                  const Spacer(),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => goToBorrowForm(context),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Text(
+                            'Pinjam mudah & cepat',
+                            style: TextStyle(
+                              color: Color(0xFFE51C23),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.18),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-
-                const Spacer(),
-
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Text(
-                        'Pinjam mudah & cepat',
-                        style: TextStyle(
-                          color: Color(0xFFE51C23),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.18),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _sectionTitle(String title) {
     return Padding(
@@ -418,18 +435,6 @@ class HomePage extends StatelessWidget {
               );
             },
           ),
-          _featureItem(
-            icon: Icons.notifications_none_rounded,
-            title: 'Notifikasi',
-            color: Colors.purple,
-            bgColor: const Color(0xFFF4E8FF),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationPage()),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -446,7 +451,7 @@ class HomePage extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: SizedBox(
-        width: 70,
+        width: 90,
         child: Column(
           children: [
             Container(
@@ -582,90 +587,9 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: softRed,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Status Akun & Peminjaman',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Verifikasi akun untuk mempercepat proses peminjaman ruangan.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black54,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 36,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IdentityVerificationPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF113B70),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                    ),
-                    child: const Text(
-                      'Verifikasi Akun',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Icon(
-              Icons.verified_user_rounded,
-              color: primaryRed,
-              size: 42,
-            ),
-          ),
-        ],
       ),
     );
   }

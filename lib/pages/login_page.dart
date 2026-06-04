@@ -99,8 +99,8 @@ class _LoginPageState extends State<LoginPage> {
                           const Text(
                             'Login SSO',
                             style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFE51C23),
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 18),

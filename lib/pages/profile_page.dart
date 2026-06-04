@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_apb/widgets/app_header.dart';
-import 'identity_verification_page.dart';
 import 'loan_history_page.dart';
 import 'login_page.dart';
 import 'settings_page.dart';
@@ -89,24 +88,6 @@ class ProfilePage extends StatelessWidget {
                           'dewa@telkomuniversity.ac.id',
                           style: TextStyle(color: Colors.white70),
                         ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'Belum Terverifikasi',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -120,19 +101,6 @@ class ProfilePage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const LoanHistoryPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  menuTile(
-                    icon: Icons.verified_user_outlined,
-                    title: 'Verifikasi Identitas',
-                    subtitle: 'Cek status verifikasi akun',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IdentityVerificationPage(),
                         ),
                       );
                     },

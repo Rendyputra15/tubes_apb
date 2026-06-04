@@ -158,7 +158,13 @@ class LoanPage extends StatelessWidget {
                                   ),
                                 );
                               },
-                              child: const Text('Lihat Riwayat Pinjaman'),
+                              child: const Text(
+                                'Lihat Riwayat Pinjaman',
+                                style: TextStyle(
+                                  color: Color(0xFFE51C23),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              )
                             ),
                           ),
                         ],

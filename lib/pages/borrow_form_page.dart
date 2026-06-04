@@ -4,6 +4,7 @@ import 'package:tubes_apb/data/app_state.dart';
 import 'package:tubes_apb/data/room_data.dart';
 import 'package:tubes_apb/models/loan_record_model.dart';
 import 'package:tubes_apb/models/room_model.dart';
+import 'package:tubes_apb/widgets/app_header.dart';
 import 'loan_success_page.dart';
 
 class BorrowFormPage extends StatefulWidget {
@@ -443,192 +444,206 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+        child: Column(
           children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const Expanded(
-                  child: Text(
-                    'Form Peminjaman',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
+            const AppHeader(
+              title: 'Form Peminjaman',
+              subtitle: 'Lengkapi data peminjaman ruangan',
+              icon: Icons.assignment_rounded,
+              showBackButton: true,
             ),
-            const SizedBox(height: 12),
-            roomPreviewCard(),
-            const SizedBox(height: 24),
-            inputBox(
-              title: 'Pilih Ruangan',
-              helper: 'Hanya ruangan dengan status tersedia yang dapat dipilih.',
-              child: DropdownButtonFormField<Room>(
-                value: selectedRoom,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                items: availableRooms.map((room) {
-                  return DropdownMenuItem(
-                    value: room,
-                    child: Text(room.name),
-                  );
-                }).toList(),
-                onChanged: (room) {
-                  if (room == null) return;
 
-                  setState(() {
-                    selectedRoom = room;
-                    selectedDate = null;
-                    selectedSchedule = null;
-                  });
-                },
-              ),
-            ),
-            inputBox(
-              title: 'Tanggal Pinjam',
-              helper:
-                  'Peminjaman minimal satu hari setelah hari ini. Tanggal paling cepat: ${formatDate(tomorrow)}',
-              child: InkWell(
-                onTap: pickDate,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          selectedDate == null
-                              ? 'Pilih tanggal'
-                              : '${formatDate(selectedDate!)} (${getDayName(selectedDate!)})',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                children: [
+                  roomPreviewCard(),
+                  const SizedBox(height: 24),
+
+                  inputBox(
+                    title: 'Pilih Ruangan',
+                    helper:
+                        'Hanya ruangan dengan status tersedia yang dapat dipilih.',
+                    child: DropdownButtonFormField<Room>(
+                      value: selectedRoom,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                      const Icon(Icons.calendar_month_rounded),
-                    ],
+                      items: availableRooms.map((room) {
+                        return DropdownMenuItem(
+                          value: room,
+                          child: Text(room.name),
+                        );
+                      }).toList(),
+                      onChanged: (room) {
+                        if (room == null) return;
+
+                        setState(() {
+                          selectedRoom = room;
+                          selectedDate = null;
+                          selectedSchedule = null;
+                        });
+                      },
+                    ),
                   ),
-                ),
-              ),
-            ),
-            inputBox(
-              title: 'Pilih Waktu Tersedia',
-              helper:
-                  'Waktu tersedia menyesuaikan jadwal akademik ruangan pada hari yang dipilih.',
-              child: scheduleSection(),
-            ),
-            inputBox(
-              title: 'Jumlah Peserta',
-              helper: 'Maksimal ${selectedRoom.capacity} orang.',
-              child: TextField(
-                controller: participantController,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Masukkan jumlah peserta',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+
+                  inputBox(
+                    title: 'Tanggal Pinjam',
+                    helper:
+                        'Peminjaman minimal satu hari setelah hari ini. Tanggal paling cepat: ${formatDate(tomorrow)}',
+                    child: InkWell(
+                      onTap: pickDate,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                selectedDate == null
+                                    ? 'Pilih tanggal'
+                                    : '${formatDate(selectedDate!)} (${getDayName(selectedDate!)})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.calendar_month_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            inputBox(
-              title: 'Keperluan',
-              child: TextField(
-                controller: purposeController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Contoh: Diskusi kelompok, rapat, presentasi, dll',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+
+                  inputBox(
+                    title: 'Pilih Waktu Tersedia',
+                    helper:
+                        'Waktu tersedia menyesuaikan jadwal akademik ruangan pada hari yang dipilih.',
+                    child: scheduleSection(),
                   ),
-                ),
-              ),
-            ),
-            inputBox(
-              title: 'Upload KTM',
-              child: uploadKtmBox(),
-            ),
-            inputBox(
-              title: 'Catatan Tambahan (Opsional)',
-              child: TextField(
-                controller: noteController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Contoh: Membutuhkan proyektor tambahan, dll',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+
+                  inputBox(
+                    title: 'Jumlah Peserta',
+                    helper: 'Maksimal ${selectedRoom.capacity} orang.',
+                    child: TextField(
+                      controller: participantController,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan jumlah peserta',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF2FF),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.notifications_active_outlined, color: Colors.blue),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Notifikasi status peminjaman akan dikirim melalui aplikasi.',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.w700,
+
+                  inputBox(
+                    title: 'Keperluan',
+                    child: TextField(
+                      controller: purposeController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Contoh: Diskusi kelompok, rapat, presentasi, dll',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  inputBox(
+                    title: 'Upload KTM',
+                    child: uploadKtmBox(),
+                  ),
+
+                  inputBox(
+                    title: 'Catatan Tambahan (Opsional)',
+                    child: TextField(
+                      controller: noteController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Contoh: Membutuhkan proyektor tambahan, dll',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF2FF),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.notifications_active_outlined,
+                          color: Colors.blue,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Notifikasi status peminjaman akan dikirim melalui aplikasi.',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  summaryCard(),
+                  const SizedBox(height: 22),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: submitLoan,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE51C23),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Konfirmasi Peminjaman',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            summaryCard(),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: submitLoan,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE51C23),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  'Konfirmasi Peminjaman',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
               ),
             ),
           ],

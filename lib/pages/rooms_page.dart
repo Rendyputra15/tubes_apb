@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_apb/data/room_data.dart';
 import 'package:tubes_apb/models/room_model.dart';
+import 'package:tubes_apb/widgets/app_header.dart';
 import 'package:tubes_apb/widgets/room_card.dart';
 import 'borrow_form_page.dart';
 import 'room_detail_page.dart';
@@ -126,47 +127,15 @@ class _RoomsPageState extends State<RoomsPage> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
-              child: Row(
-                children: [
-                  const Text(
-                    'Ruangan',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE51C23),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.meeting_room_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+            const AppHeader(
+              title: 'Ruangan',
+              subtitle: 'Pilih ruang kelas berdasarkan status ketersediaan',
+              icon: Icons.meeting_room_rounded,
+              showBackButton: true,
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Pilih ruang kelas berdasarkan status ketersediaan.',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
+
             const SizedBox(height: 16),
+
             SizedBox(
               height: 46,
               child: ListView(
@@ -175,7 +144,9 @@ class _RoomsPageState extends State<RoomsPage> {
                 children: filters.map(filterChip).toList(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             Expanded(
               child: rooms.isEmpty
                   ? emptyState()

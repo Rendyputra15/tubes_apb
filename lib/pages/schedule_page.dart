@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_apb/data/room_data.dart';
 import 'package:tubes_apb/models/room_model.dart';
+import 'package:tubes_apb/widgets/app_header.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -167,9 +168,7 @@ class _SchedulePageState extends State<SchedulePage> {
               )
             ],
           ),
-
           const SizedBox(height: 10),
-
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -179,14 +178,11 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             ),
           ),
-
           const SizedBox(height: 8),
-
           schedules.isEmpty
               ? const Text('Tidak ada waktu kosong')
               : Wrap(
-                  children:
-                      schedules.map((e) => scheduleChip(e)).toList(),
+                  children: schedules.map((e) => scheduleChip(e)).toList(),
                 ),
         ],
       ),
@@ -202,17 +198,14 @@ class _SchedulePageState extends State<SchedulePage> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 16),
-
-            const Text(
-              'Jadwal Ruangan',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
+            const AppHeader(
+              title: 'Jadwal Ruangan',
+              subtitle: 'Lihat jadwal ketersediaan ruangan',
+              icon: Icons.calendar_month_rounded,
+              showBackButton: true,
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -122,7 +122,13 @@ class RoomCard extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFD32F2F),
                             ),
-                            child: const Text('Pinjam'),
+                            child: const Text(
+                              'Pinjam',
+                              style: TextStyle(
+                                color: Color(0xFFE51C23),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            )
                           ),
                         ),
                       ],
