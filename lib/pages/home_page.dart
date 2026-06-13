@@ -66,12 +66,19 @@ class HomePage extends StatelessWidget {
               delegate: SliverChildListDelegate(
                 [
                   const SizedBox(height: 16),
+
                   _buildHeroCard(context),
+
                   const SizedBox(height: 24),
+
                   _sectionTitle('Fitur'),
+
                   const SizedBox(height: 12),
+
                   _buildFeaturePanel(context),
+
                   const SizedBox(height: 24),
+
                   _sectionTitleWithAction(
                     title: 'Ruang Terbaik & Rekomendasi',
                     action: 'Lihat semua >',
@@ -84,8 +91,19 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
+
                   const SizedBox(height: 12),
+
                   _buildRecommendationList(context, recommendedRooms),
+
+                  const SizedBox(height: 24),
+
+                  _sectionTitle('Feedback Pengguna'),
+
+                  const SizedBox(height: 12),
+
+                  _buildFeedbackSection(),
+
                   const SizedBox(height: 28),
                 ],
               ),
@@ -114,7 +132,9 @@ class HomePage extends StatelessWidget {
               size: 22,
             ),
           ),
+
           const SizedBox(width: 10),
+
           RichText(
             text: const TextSpan(
               style: TextStyle(
@@ -134,7 +154,9 @@ class HomePage extends StatelessWidget {
               ],
             ),
           ),
+
           const Spacer(),
+
           InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: () {
@@ -215,6 +237,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
+
             Positioned(
               right: 18,
               bottom: 20,
@@ -224,6 +247,7 @@ class HomePage extends StatelessWidget {
                 color: Colors.white.withOpacity(0.18),
               ),
             ),
+
             Positioned(
               right: 28,
               top: 35,
@@ -244,6 +268,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
@@ -267,7 +292,9 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 14),
+
                   const Text(
                     'Temukan ruangan\nterbaik untuk\nkegiatanmu',
                     style: TextStyle(
@@ -278,7 +305,9 @@ class HomePage extends StatelessWidget {
                       letterSpacing: -0.4,
                     ),
                   ),
+
                   const Spacer(),
+
                   InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () => goToBorrowForm(context),
@@ -303,7 +332,9 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
                         ),
+
                         const SizedBox(width: 10),
+
                         Container(
                           width: 38,
                           height: 38,
@@ -365,6 +396,7 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
+
           InkWell(
             onTap: onTap,
             child: Text(
@@ -467,7 +499,9 @@ class HomePage extends StatelessWidget {
                 size: 28,
               ),
             ),
+
             const SizedBox(height: 8),
+
             Text(
               title,
               textAlign: TextAlign.center,
@@ -543,6 +577,7 @@ class HomePage extends StatelessWidget {
                 },
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: Column(
@@ -557,7 +592,9 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+
                   const SizedBox(height: 6),
+
                   Text(
                     'Kapasitas ${room.capacity} orang',
                     style: const TextStyle(
@@ -566,7 +603,9 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   const Row(
                     children: [
                       Icon(
@@ -590,6 +629,162 @@ class HomePage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackSection() {
+    final feedbacks = [
+      {
+        'name': 'Ahmad Dewa',
+        'role': 'Mahasiswa Teknologi Informasi',
+        'text':
+            'Peminjaman ruangan jadi lebih cepat dan tidak perlu tanya admin manual lagi.',
+        'rating': 5,
+        'initial': 'AD',
+      },
+      {
+        'name': 'Salsa Putri',
+        'role': 'Mahasiswa Sistem Informasi',
+        'text':
+            'Aplikasinya membantu banget buat cek ruangan kosong sebelum kegiatan kelompok.',
+        'rating': 5,
+        'initial': 'SP',
+      },
+      {
+        'name': 'Rizky Pratama',
+        'role': 'Mahasiswa Informatika',
+        'text':
+            'Tampilan aplikasinya simpel, jelas, dan proses pengajuan pinjam ruangannya mudah dipahami.',
+        'rating': 4,
+        'initial': 'RP',
+      },
+    ];
+
+    return SizedBox(
+      height: 190,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 18, right: 8),
+        itemCount: feedbacks.length,
+        itemBuilder: (context, index) {
+          final item = feedbacks[index];
+
+          return Container(
+            width: 280,
+            margin: const EdgeInsets.only(right: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.055),
+                  blurRadius: 16,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFD32F2F),
+                            Color(0xFFF44336),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          item['initial'].toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['name'].toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            item['role'].toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: List.generate(
+                    5,
+                    (starIndex) {
+                      final rating = item['rating'] as int;
+
+                      return Icon(
+                        starIndex < rating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: Colors.orange,
+                        size: 19,
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Expanded(
+                  child: Text(
+                    '"${item['text']}"',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      height: 1.45,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

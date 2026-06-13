@@ -76,7 +76,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 14),
                         const Text(
-                          'Dewa Mahasiswa',
+                          'Ahmad Dewa',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -85,7 +85,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'dewa@telkomuniversity.ac.id',
+                          'ahmaddewa@telkomuniversity.ac.id',
                           style: TextStyle(color: Colors.white70),
                         ),
                       ],

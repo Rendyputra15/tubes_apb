@@ -94,14 +94,17 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  Widget daySelector() {
+  Widget dayDropdown() {
     return Container(
-      height: 54,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 54,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: titleRed.withOpacity(0.12),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.045),
@@ -110,47 +113,55 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          final day = days[index];
-          final active = selectedDay == day;
-
-          return GestureDetector(
-            onTap: () {
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedDay,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: titleRed,
+          ),
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          onChanged: (value) {
+            if (value != null) {
               setState(() {
-                selectedDay = day;
+                selectedDay = value;
               });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                gradient: active
-                    ? const LinearGradient(
-                        colors: [
-                          Color(0xFFD32F2F),
-                          Color(0xFFF44336),
-                        ],
-                      )
-                    : null,
-                color: active ? null : const Color(0xFFF8F9FB),
-                borderRadius: BorderRadius.circular(16),
+            }
+          },
+          items: days.map((day) {
+            return DropdownMenuItem<String>(
+              value: day,
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: softRed,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: titleRed,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    day,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
               ),
-              alignment: Alignment.center,
-              child: Text(
-                day,
-                style: TextStyle(
-                  color: active ? Colors.white : Colors.black54,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          );
-        },
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -199,9 +210,7 @@ class _SchedulePageState extends State<SchedulePage> {
               size: 22,
             ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +257,6 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
           ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
@@ -333,9 +341,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   size: 28,
                 ),
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +365,6 @@ class _SchedulePageState extends State<SchedulePage> {
                   ],
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -390,9 +395,7 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -410,7 +413,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Waktu tersedia hari $selectedDay',
+                    'Waktu kosong hari $selectedDay',
                     style: const TextStyle(
                       color: Colors.black87,
                       fontWeight: FontWeight.w900,
@@ -428,9 +431,7 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
           ),
-
           const SizedBox(height: 12),
-
           schedules.isEmpty
               ? emptySchedule()
               : Column(
@@ -456,13 +457,11 @@ class _SchedulePageState extends State<SchedulePage> {
           children: [
             const AppHeader(
               title: 'Jadwal Ruangan',
-              subtitle: 'Lihat jadwal ketersediaan ruangan',
+              subtitle: 'Lihat jadwal kosong tiap ruangan',
               icon: Icons.calendar_month_rounded,
               showBackButton: true,
             ),
-
             const SizedBox(height: 16),
-
             SizedBox(
               height: 44,
               child: ListView(
@@ -471,13 +470,9 @@ class _SchedulePageState extends State<SchedulePage> {
                 children: floors.map(floorChip).toList(),
               ),
             ),
-
             const SizedBox(height: 12),
-
-            daySelector(),
-
+            dayDropdown(),
             const SizedBox(height: 12),
-
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
