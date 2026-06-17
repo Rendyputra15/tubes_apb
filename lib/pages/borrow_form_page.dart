@@ -1,41 +1,52 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:tubes_apb/data/app_state.dart';
-import 'package:tubes_apb/data/room_data.dart';
+import 'package:tubes_apb/models/availability_model.dart';
 import 'package:tubes_apb/models/loan_record_model.dart';
 import 'package:tubes_apb/models/room_model.dart';
+import 'package:tubes_apb/services/api_service.dart';
 import 'package:tubes_apb/widgets/app_header.dart';
+
 import 'loan_success_page.dart';
 
 class BorrowFormPage extends StatefulWidget {
   final Room room;
 
-  const BorrowFormPage({
-    super.key,
-    required this.room,
-  });
+  const BorrowFormPage({super.key, required this.room});
 
   @override
   State<BorrowFormPage> createState() => _BorrowFormPageState();
 }
 
 class _BorrowFormPageState extends State<BorrowFormPage> {
+  static const Color primaryRed = Color(0xFFD32F2F);
+
+  static const Color titleRed = Color(0xFFE51C23);
+
+  static const Color softRed = Color(0xFFFFE3E3);
+
   DateTime? selectedDate;
-  Room? selectedRoom;
-  String? selectedSchedule;
+
+  AvailabilityRoom? selectedRoom;
+
+  AvailableSlot? selectedSlot;
+
+  PlatformFile? selectedKtmFile;
+
+  List<AvailabilityRoom> availableRooms = [];
+
+  bool isLoadingAvailability = false;
+  bool isSubmitting = false;
+  bool isPickingFile = false;
 
   final participantController = TextEditingController();
+
   final purposeController = TextEditingController();
+
   final noteController = TextEditingController();
-
-  String? ktmFileName;
-
-  static const Color primaryRed = Color(0xFFD32F2F);
-  static const Color titleRed = Color(0xFFE51C23);
-  static const Color softRed = Color(0xFFFFE3E3);
 
   DateTime get minBorrowDate {
     final now = DateTime.now();
+
     return DateTime(now.year, now.month, now.day + 1);
   }
 
@@ -44,311 +55,343 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
     participantController.dispose();
     purposeController.dispose();
     noteController.dispose();
+
     super.dispose();
   }
 
   String formatDate(DateTime date) {
-    return '${date.day}-${date.month}-${date.year}';
-  }
+    final day = date.day.toString().padLeft(2, '0');
 
-  String getDayName(DateTime date) {
-    switch (date.weekday) {
-      case DateTime.monday:
-        return 'Senin';
-      case DateTime.tuesday:
-        return 'Selasa';
-      case DateTime.wednesday:
-        return 'Rabu';
-      case DateTime.thursday:
-        return 'Kamis';
-      case DateTime.friday:
-        return 'Jumat';
-      case DateTime.saturday:
-        return 'Sabtu';
-      case DateTime.sunday:
-        return 'Minggu';
-      default:
-        return '-';
-    }
-  }
+    final month = date.month.toString().padLeft(2, '0');
 
-  List<Room> getAvailableRoomsForSelectedDate() {
-    if (selectedDate == null) return [];
-
-    final dayName = getDayName(selectedDate!);
-
-    return RoomData.allRooms.where((room) {
-      final schedules = room.availableSchedules[dayName] ?? [];
-      return schedules.isNotEmpty;
-    }).toList();
-  }
-
-  List<String> getAvailableSchedulesForSelectedRoom() {
-    if (selectedDate == null || selectedRoom == null) return [];
-
-    final dayName = getDayName(selectedDate!);
-    return selectedRoom!.availableSchedules[dayName] ?? [];
+    return '$day-$month-${date.year}';
   }
 
   Future<void> pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: minBorrowDate,
+      initialDate: selectedDate ?? minBorrowDate,
       firstDate: minBorrowDate,
       lastDate: minBorrowDate.add(const Duration(days: 60)),
+      helpText: 'Pilih tanggal peminjaman',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
     );
 
-    if (picked != null) {
-      final rooms = RoomData.allRooms.where((room) {
-        final schedules = room.availableSchedules[getDayName(picked)] ?? [];
-        return schedules.isNotEmpty;
-      }).toList();
-
-      setState(() {
-        selectedDate = picked;
-
-        if (rooms.contains(widget.room)) {
-          selectedRoom = widget.room;
-        } else {
-          selectedRoom = null;
-        }
-
-        final schedules = selectedRoom == null
-            ? <String>[]
-            : selectedRoom!.availableSchedules[getDayName(picked)] ?? [];
-
-        selectedSchedule = schedules.isNotEmpty ? schedules.first : null;
-      });
-    }
-  }
-
-  Future<void> pickKtm() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: false,
-    );
-
-    if (result != null && result.files.isNotEmpty) {
-      setState(() {
-        ktmFileName = result.files.first.name;
-      });
-    }
-  }
-
-  void submitLoan() {
-    if (selectedDate == null ||
-        selectedRoom == null ||
-        selectedSchedule == null ||
-        participantController.text.trim().isEmpty ||
-        purposeController.text.trim().isEmpty ||
-        ktmFileName == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lengkapi tanggal, ruangan, waktu, jumlah peserta, keperluan, dan KTM.',
-          ),
-        ),
-      );
+    if (picked == null) {
       return;
     }
 
-    final participant = int.tryParse(participantController.text.trim()) ?? 0;
+    setState(() {
+      selectedDate = picked;
+      selectedRoom = null;
+      selectedSlot = null;
+      availableRooms = [];
+      isLoadingAvailability = true;
+    });
 
-    if (participant <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jumlah peserta harus lebih dari 0.'),
-        ),
+    try {
+      final response = await ApiService.instance.getAvailability(picked);
+
+      if (!mounted) {
+        return;
+      }
+
+      final rooms = response.rooms;
+
+      AvailabilityRoom? initialRoom;
+
+      for (final room in rooms) {
+        if (room.id == widget.room.id) {
+          initialRoom = room;
+          break;
+        }
+      }
+
+      setState(() {
+        availableRooms = rooms;
+        selectedRoom = initialRoom;
+
+        if (initialRoom != null && initialRoom.availableSlots.isNotEmpty) {
+          selectedSlot = initialRoom.availableSlots.first;
+        }
+
+        isLoadingAvailability = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        isLoadingAvailability = false;
+      });
+
+      _showMessage(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        isLoadingAvailability = false;
+      });
+
+      _showMessage('Terjadi kesalahan saat mengambil jadwal.');
+    }
+  }
+
+  Future<void> pickKtmFile() async {
+    if (isPickingFile) {
+      return;
+    }
+
+    setState(() {
+      isPickingFile = true;
+    });
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        withData: true,
       );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (result == null || result.files.isEmpty) {
+        setState(() {
+          isPickingFile = false;
+        });
+
+        return;
+      }
+
+      final file = result.files.first;
+
+      if (file.bytes == null) {
+        setState(() {
+          isPickingFile = false;
+        });
+
+        _showMessage('File KTM tidak dapat dibaca.');
+
+        return;
+      }
+
+      final fileSizeInMb = file.size / (1024 * 1024);
+
+      if (fileSizeInMb > 2) {
+        setState(() {
+          isPickingFile = false;
+        });
+
+        _showMessage('Ukuran file KTM maksimal 2 MB.');
+
+        return;
+      }
+
+      setState(() {
+        selectedKtmFile = file;
+        isPickingFile = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        isPickingFile = false;
+      });
+
+      _showMessage('Gagal memilih file KTM.');
+    }
+  }
+
+  void removeKtmFile() {
+    setState(() {
+      selectedKtmFile = null;
+    });
+  }
+
+  Future<void> submitBooking() async {
+    if (selectedDate == null) {
+      _showMessage('Silakan pilih tanggal peminjaman.');
+      return;
+    }
+
+    if (selectedRoom == null) {
+      _showMessage('Silakan pilih ruangan.');
+      return;
+    }
+
+    if (selectedSlot == null) {
+      _showMessage('Silakan pilih slot waktu.');
+      return;
+    }
+
+    final participant = int.tryParse(participantController.text.trim());
+
+    if (participant == null || participant <= 0) {
+      _showMessage('Jumlah peserta harus lebih dari 0.');
       return;
     }
 
     if (participant > selectedRoom!.capacity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Jumlah peserta tidak boleh melebihi kapasitas ${selectedRoom!.capacity} orang.',
-          ),
-        ),
-      );
+      _showMessage('Jumlah peserta melebihi kapasitas ruangan.');
       return;
     }
 
-    final loan = LoanRecord(
-      code:
-          '#PNJ${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-      roomName: selectedRoom!.name,
-      dateText: formatDate(selectedDate!),
-      timeText: selectedSchedule!,
-      participantCount: participant,
-      purpose: purposeController.text.trim(),
-      studentCardFile: ktmFileName ?? '-',
-      status: 'Menunggu',
-    );
+    final purpose = purposeController.text.trim();
 
-    AppState.addLoan(loan);
+    if (purpose.isEmpty) {
+      _showMessage('Keperluan peminjaman wajib diisi.');
+      return;
+    }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => LoanSuccessPage(loan: loan),
+    if (selectedKtmFile == null || selectedKtmFile!.bytes == null) {
+      _showMessage('Silakan upload KTM terlebih dahulu.');
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isSubmitting = true;
+    });
+
+    try {
+      final result = await ApiService.instance.createBooking(
+        roomId: selectedRoom!.id,
+        bookingDate: selectedDate!,
+        startTime: selectedSlot!.startTime,
+        endTime: selectedSlot!.endTime,
+        participantCount: participant,
+        purpose: purpose,
+        note: noteController.text,
+        studentCardBytes: selectedKtmFile!.bytes,
+        studentCardFileName: selectedKtmFile!.name,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final rawBooking = result['data'] ?? result['booking'] ?? result;
+
+      Map<String, dynamic> booking = {};
+
+      if (rawBooking is Map<String, dynamic>) {
+        booking = rawBooking;
+      } else if (rawBooking is Map) {
+        booking = Map<String, dynamic>.from(rawBooking);
+      }
+
+      final bookingCode =
+          booking['code']?.toString() ??
+          booking['booking_code']?.toString() ??
+          '#PNJ${DateTime.now().millisecondsSinceEpoch}';
+
+      final status = booking['status']?.toString() ?? 'Menunggu';
+
+      final studentCardFile =
+          booking['student_card_file']?.toString() ??
+          booking['studentCardFile']?.toString() ??
+          selectedKtmFile!.name;
+
+      final loan = LoanRecord(
+        code: bookingCode,
+        roomName: selectedRoom!.name,
+        dateText: formatDate(selectedDate!),
+        timeText: selectedSlot!.displayTime,
+        participantCount: participant,
+        purpose: purpose,
+        studentCardFile: studentCardFile,
+        status: status,
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoanSuccessPage(loan: loan)),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('Pengajuan gagal dikirim.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: primaryRed,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  Widget inputBox({
-    required String title,
-    required Widget child,
-    String? helper,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        child,
-        if (helper != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            helper,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-        ],
-        const SizedBox(height: 18),
-      ],
-    );
-  }
-
-  Widget stepIndicator() {
-    final bool dateDone = selectedDate != null;
-    final bool roomDone = selectedRoom != null;
-    final bool timeDone = selectedSchedule != null;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.045),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          stepItem(
-            number: '1',
-            title: 'Tanggal',
-            active: dateDone,
-          ),
-          stepLine(dateDone && roomDone),
-          stepItem(
-            number: '2',
-            title: 'Ruangan',
-            active: roomDone,
-          ),
-          stepLine(roomDone && timeDone),
-          stepItem(
-            number: '3',
-            title: 'Waktu',
-            active: timeDone,
-          ),
-        ],
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
       ),
     );
   }
 
-  Widget stepItem({
-    required String number,
-    required String title,
-    required bool active,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: active ? titleRed : softRed,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: active
-                ? const Icon(
-                    Icons.check_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                : Text(
-                    number,
-                    style: const TextStyle(
-                      color: titleRed,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          title,
-          style: TextStyle(
-            color: active ? titleRed : Colors.grey[600],
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget stepLine(bool active) {
-    return Expanded(
-      child: Container(
-        height: 3,
-        margin: const EdgeInsets.only(bottom: 22),
-        decoration: BoxDecoration(
-          color: active ? titleRed : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-        ),
+  InputDecoration _inputDecoration({required String hint, IconData? icon}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: icon == null ? null : Icon(icon, color: titleRed),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: titleRed, width: 1.5),
       ),
     );
   }
 
-  Widget datePickerBox() {
+  Widget _dateBox() {
     return InkWell(
-      onTap: pickDate,
+      onTap: isLoadingAvailability ? null : pickDate,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color:
-                selectedDate == null ? Colors.grey.shade200 : titleRed,
+            color: selectedDate == null ? Colors.grey.shade200 : titleRed,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.035),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -357,489 +400,274 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
               height: 46,
               decoration: BoxDecoration(
                 color: softRed,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(15),
               ),
-              child: const Icon(
-                Icons.calendar_month_rounded,
-                color: titleRed,
-              ),
+              child: const Icon(Icons.calendar_month_rounded, color: titleRed),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 selectedDate == null
                     ? 'Pilih tanggal peminjaman'
-                    : '${formatDate(selectedDate!)} • ${getDayName(selectedDate!)}',
+                    : formatDate(selectedDate!),
                 style: TextStyle(
-                  color: selectedDate == null ? Colors.grey[600] : Colors.black87,
-                  fontWeight: FontWeight.w900,
+                  color: selectedDate == null
+                      ? Colors.grey[600]
+                      : Colors.black87,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: titleRed,
-            ),
+            if (isLoadingAvailability)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: titleRed,
+                ),
+              )
+            else
+              const Icon(Icons.keyboard_arrow_down, color: titleRed),
           ],
         ),
       ),
     );
   }
 
-  Widget roomDropdownBox() {
-    final rooms = getAvailableRoomsForSelectedDate();
-
+  Widget _roomDropdown() {
     if (selectedDate == null) {
-      return disabledInfoBox(
+      return _disabledBox('Pilih tanggal terlebih dahulu.');
+    }
+
+    if (isLoadingAvailability) {
+      return _disabledBox('Mengambil daftar ruangan...');
+    }
+
+    if (availableRooms.isEmpty) {
+      return _disabledBox('Tidak ada ruangan tersedia pada tanggal tersebut.');
+    }
+
+    return DropdownButtonFormField<AvailabilityRoom>(
+      value: selectedRoom,
+      isExpanded: true,
+      decoration: _inputDecoration(
+        hint: 'Pilih ruangan',
         icon: Icons.meeting_room_rounded,
-        text: 'Pilih tanggal terlebih dahulu untuk melihat ruangan yang kosong.',
-      );
-    }
-
-    if (rooms.isEmpty) {
-      return disabledInfoBox(
-        icon: Icons.event_busy_rounded,
-        text:
-            'Tidak ada ruangan kosong pada hari ${getDayName(selectedDate!)}. Silakan pilih tanggal lain.',
-        isWarning: true,
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: selectedRoom == null ? Colors.grey.shade200 : titleRed,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Room>(
-          value: selectedRoom,
-          isExpanded: true,
-          borderRadius: BorderRadius.circular(18),
-          hint: const Text(
-            'Pilih ruangan kosong',
-            style: TextStyle(fontWeight: FontWeight.w700),
+      items: availableRooms.map((room) {
+        return DropdownMenuItem<AvailabilityRoom>(
+          value: room,
+          child: Text(
+            '${room.name} • ${room.availableSlots.length} slot',
+            overflow: TextOverflow.ellipsis,
           ),
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: titleRed,
-          ),
-          onChanged: (room) {
-            if (room == null) return;
-
-            final schedules =
-                room.availableSchedules[getDayName(selectedDate!)] ?? [];
-
-            setState(() {
-              selectedRoom = room;
-              selectedSchedule = schedules.isNotEmpty ? schedules.first : null;
-            });
-          },
-          items: rooms.map((room) {
-            final schedules =
-                room.availableSchedules[getDayName(selectedDate!)] ?? [];
-
-            return DropdownMenuItem<Room>(
-              value: room,
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: softRed,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: const Icon(
-                      Icons.meeting_room_rounded,
-                      color: titleRed,
-                      size: 21,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      room.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${schedules.length} sesi',
-                    style: const TextStyle(
-                      color: titleRed,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget scheduleSection() {
-    final schedules = getAvailableSchedulesForSelectedRoom();
-
-    if (selectedDate == null) {
-      return disabledInfoBox(
-        icon: Icons.access_time_filled_rounded,
-        text: 'Pilih tanggal terlebih dahulu.',
-      );
-    }
-
-    if (selectedRoom == null) {
-      return disabledInfoBox(
-        icon: Icons.access_time_filled_rounded,
-        text: 'Pilih ruangan terlebih dahulu untuk melihat waktu kosong.',
-      );
-    }
-
-    if (schedules.isEmpty) {
-      return disabledInfoBox(
-        icon: Icons.event_busy_rounded,
-        text: 'Tidak ada waktu kosong untuk ruangan ini.',
-        isWarning: true,
-      );
-    }
-
-    return Column(
-      children: schedules.map((schedule) => scheduleChoice(schedule)).toList(),
-    );
-  }
-
-  Widget scheduleChoice(String schedule) {
-    final selected = selectedSchedule == schedule;
-    final parts = schedule.split(' - ');
-    final start = parts.isNotEmpty ? parts[0] : schedule;
-    final end = parts.length > 1 ? parts[1] : '';
-
-    return GestureDetector(
-      onTap: () {
+        );
+      }).toList(),
+      onChanged: (room) {
         setState(() {
-          selectedSchedule = schedule;
+          selectedRoom = room;
+
+          if (room != null && room.availableSlots.isNotEmpty) {
+            selectedSlot = room.availableSlots.first;
+          } else {
+            selectedSlot = null;
+          }
         });
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(13),
+    );
+  }
+
+  Widget _slotDropdown() {
+    if (selectedRoom == null) {
+      return _disabledBox('Pilih ruangan terlebih dahulu.');
+    }
+
+    final slots = selectedRoom!.availableSlots;
+
+    if (slots.isEmpty) {
+      return _disabledBox('Tidak ada slot waktu tersedia.');
+    }
+
+    return DropdownButtonFormField<AvailableSlot>(
+      value: selectedSlot,
+      isExpanded: true,
+      decoration: _inputDecoration(
+        hint: 'Pilih slot waktu',
+        icon: Icons.access_time_rounded,
+      ),
+      items: slots.map((slot) {
+        return DropdownMenuItem<AvailableSlot>(
+          value: slot,
+          child: Text(slot.displayTime),
+        );
+      }).toList(),
+      onChanged: (slot) {
+        setState(() {
+          selectedSlot = slot;
+        });
+      },
+    );
+  }
+
+  Widget _ktmUploadBox() {
+    final file = selectedKtmFile;
+
+    return InkWell(
+      onTap: isPickingFile || isSubmitting ? null : pickKtmFile,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? titleRed : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? titleRed : Colors.grey.shade200,
+            color: file == null ? Colors.grey.shade200 : titleRed,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.035),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: selected ? Colors.white.withOpacity(0.18) : softRed,
+                color: softRed,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: Icon(
-                Icons.access_time_filled_rounded,
-                color: selected ? Colors.white : titleRed,
-              ),
+              child: const Icon(Icons.badge_rounded, color: titleRed),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    start,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+              child: file == null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Upload KTM',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Format JPG, PNG, atau PDF. Maksimal 2 MB.',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          file.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${(file.size / 1024).toStringAsFixed(1)} KB',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  if (end.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 17,
-                        color: selected ? Colors.white : titleRed,
-                      ),
-                    ),
-                    Text(
-                      end,
-                      style: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
             ),
-            Icon(
-              selected
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_unchecked_rounded,
-              color: selected ? Colors.white : Colors.grey,
-            ),
+            if (isPickingFile)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: titleRed,
+                ),
+              )
+            else if (file != null)
+              IconButton(
+                onPressed: removeKtmFile,
+                icon: const Icon(Icons.close_rounded, color: Colors.red),
+              )
+            else
+              const Icon(Icons.upload_file_rounded, color: titleRed),
           ],
         ),
       ),
     );
   }
 
-  Widget disabledInfoBox({
-    required IconData icon,
-    required String text,
-    bool isWarning = false,
-  }) {
+  Widget _disabledBox(String text) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isWarning ? const Color(0xFFFFE8EA) : Colors.white,
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isWarning ? titleRed.withOpacity(0.2) : Colors.grey.shade200,
-        ),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: isWarning ? titleRed : Colors.grey[500],
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isWarning ? titleRed : Colors.grey[700],
-                height: 1.4,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
       ),
     );
   }
 
-  Widget selectedRoomPreviewCard() {
-    if (selectedRoom == null) {
-      return const SizedBox();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFF2D38),
-            Color(0xFFE51C23),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: titleRed.withOpacity(0.20),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.network(
-              selectedRoom!.imageUrl,
-              width: 74,
-              height: 74,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) {
-                return Container(
-                  width: 74,
-                  height: 74,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.meeting_room),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  selectedRoom!.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  selectedRoom!.location,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Kapasitas ${selectedRoom!.capacity} orang',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget uploadKtmBox() {
-    return InkWell(
-      onTap: pickKtm,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              ktmFileName == null
-                  ? Icons.cloud_upload_outlined
-                  : Icons.check_circle,
-              size: 42,
-              color: ktmFileName == null ? Colors.grey : Colors.green,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              ktmFileName ?? 'Upload KTM',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'File berupa gambar JPG/PNG',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget summaryCard() {
+  Widget _summaryCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE8EA),
-        borderRadius: BorderRadius.circular(22),
+        color: const Color(0xFFFFF6F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: titleRed.withOpacity(0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Ringkasan Peminjaman',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          ),
+          const SizedBox(height: 10),
+          _summaryRow(
+            'Tanggal',
+            selectedDate == null ? '-' : formatDate(selectedDate!),
+          ),
+          _summaryRow('Ruangan', selectedRoom?.name ?? '-'),
+          _summaryRow('Waktu', selectedSlot?.displayTime ?? '-'),
+          _summaryRow('KTM', selectedKtmFile?.name ?? '-'),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 85,
+            child: Text(label, style: TextStyle(color: Colors.grey[600])),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Tanggal: ${selectedDate == null ? '-' : formatDate(selectedDate!)}',
-          ),
-          Text(
-            'Hari: ${selectedDate == null ? '-' : getDayName(selectedDate!)}',
-          ),
-          Text('Ruangan: ${selectedRoom?.name ?? '-'}'),
-          Text('Waktu: ${selectedSchedule ?? '-'}'),
-          Text(
-            'Peserta: ${participantController.text.isEmpty ? '-' : participantController.text} orang',
           ),
         ],
       ),
     );
   }
 
-  Widget textInput({
-    required TextEditingController controller,
-    required String hint,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 15,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: titleRed, width: 1.3),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final rooms = getAvailableRoomsForSelectedDate();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
@@ -847,106 +675,94 @@ class _BorrowFormPageState extends State<BorrowFormPage> {
           children: [
             const AppHeader(
               title: 'Form Peminjaman',
-              subtitle: 'Pilih tanggal, ruangan, lalu waktu kosong',
-              icon: Icons.assignment_rounded,
+              subtitle: 'Lengkapi data peminjaman ruangan',
+              icon: Icons.edit_calendar_rounded,
               showBackButton: true,
             ),
             Expanded(
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(18),
-                children: [
-                  stepIndicator(),
-                  const SizedBox(height: 18),
-
-                  inputBox(
-                    title: '1. Pilih Tanggal Peminjaman',
-                    helper:
-                        'Tanggal dipilih terlebih dahulu agar sistem dapat menampilkan ruangan yang kosong pada hari tersebut.',
-                    child: datePickerBox(),
-                  ),
-
-                  inputBox(
-                    title: '2. Pilih Ruangan Kosong',
-                    helper: selectedDate == null
-                        ? null
-                        : 'Tersedia ${rooms.length} ruangan kosong pada hari ${getDayName(selectedDate!)}.',
-                    child: roomDropdownBox(),
-                  ),
-
-                  if (selectedRoom != null) ...[
-                    selectedRoomPreviewCard(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionTitle('Tanggal Peminjaman'),
+                    _dateBox(),
                     const SizedBox(height: 18),
-                  ],
-
-                  inputBox(
-                    title: '3. Pilih Waktu Kosong',
-                    child: scheduleSection(),
-                  ),
-
-                  inputBox(
-                    title: 'Jumlah Peserta',
-                    child: textInput(
+                    _sectionTitle('Ruangan'),
+                    _roomDropdown(),
+                    const SizedBox(height: 18),
+                    _sectionTitle('Waktu'),
+                    _slotDropdown(),
+                    const SizedBox(height: 18),
+                    _sectionTitle('Jumlah Peserta'),
+                    TextField(
                       controller: participantController,
-                      hint: 'Masukkan jumlah peserta',
                       keyboardType: TextInputType.number,
+                      decoration: _inputDecoration(
+                        hint: 'Masukkan jumlah peserta',
+                        icon: Icons.people_outline,
+                      ),
                     ),
-                  ),
-
-                  inputBox(
-                    title: 'Keperluan Peminjaman',
-                    child: textInput(
+                    const SizedBox(height: 18),
+                    _sectionTitle('Keperluan'),
+                    TextField(
                       controller: purposeController,
-                      hint: 'Contoh: Diskusi kelompok dan presentasi tugas',
                       maxLines: 3,
+                      decoration: _inputDecoration(
+                        hint: 'Contoh: diskusi kelompok',
+                        icon: Icons.description_outlined,
+                      ),
                     ),
-                  ),
-
-                  inputBox(
-                    title: 'Catatan Tambahan',
-                    helper: 'Opsional',
-                    child: textInput(
+                    const SizedBox(height: 18),
+                    _sectionTitle('Upload KTM'),
+                    _ktmUploadBox(),
+                    const SizedBox(height: 18),
+                    _sectionTitle('Catatan Tambahan'),
+                    TextField(
                       controller: noteController,
-                      hint: 'Tambahkan catatan jika diperlukan',
                       maxLines: 3,
-                    ),
-                  ),
-
-                  inputBox(
-                    title: 'Upload KTM',
-                    helper: 'Digunakan sebagai bukti identitas mahasiswa.',
-                    child: uploadKtmBox(),
-                  ),
-
-                  summaryCard(),
-
-                  const SizedBox(height: 22),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: submitLoan,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: titleRed,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: const Text(
-                        'Ajukan Peminjaman',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      decoration: _inputDecoration(
+                        hint: 'Opsional',
+                        icon: Icons.notes_rounded,
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                    _summaryCard(),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting ? null : submitBooking,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryRed,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: primaryRed.withOpacity(0.55),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 23,
+                                height: 23,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Kirim Pengajuan',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

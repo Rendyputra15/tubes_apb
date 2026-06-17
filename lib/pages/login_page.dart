@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'main_navigation.dart';
+import 'package:tubes_apb/pages/main_navigation.dart';
+import 'package:tubes_apb/services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,33 +11,85 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final usernameController = TextEditingController();
+
   final passwordController = TextEditingController();
 
   bool showForm = false;
   bool hidePassword = true;
+  bool isLoading = false;
 
-  final Color primaryRed = const Color(0xFFD32F2F);
-  final Color titleRed = const Color(0xFFE51C23);
+  static const Color primaryRed = Color(0xFFD32F2F);
 
-  void login() {
-    if (usernameController.text.trim() == 'ahmaddewa' &&
-        passwordController.text.trim() == 'dewa123') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username atau password salah.')),
-      );
-    }
-  }
+  static const Color titleRed = Color(0xFFE51C23);
 
   @override
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
+
     super.dispose();
+  }
+
+  Future<void> login() async {
+    final username = usernameController.text.trim();
+
+    final password = passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      _showMessage('Username dan password wajib diisi.');
+
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await ApiService.instance.login(username: username, password: password);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+        (route) => false,
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('Terjadi kesalahan saat login.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: primaryRed,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -67,7 +120,6 @@ class _LoginPageState extends State<LoginPage> {
                   : MainAxisAlignment.center,
               children: [
                 SizedBox(height: showForm ? 35 : 0),
-
                 Container(
                   width: 96,
                   height: 96,
@@ -83,15 +135,10 @@ class _LoginPageState extends State<LoginPage> {
                     color: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 22),
-
                 RichText(
                   text: const TextSpan(
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800),
                     children: [
                       TextSpan(
                         text: 'Inst4',
@@ -104,23 +151,26 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
                   'Sistem Peminjaman Ruangan Kampus',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
-
                 SizedBox(height: showForm ? 45 : 90),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: showForm ? _buildLoginForm() : _buildLoginIntro(),
                 ),
@@ -136,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
+        const Text(
           'Login SSO',
           style: TextStyle(
             color: titleRed,
@@ -144,13 +194,14 @@ class _LoginPageState extends State<LoginPage> {
             fontWeight: FontWeight.w900,
           ),
         ),
-
         const SizedBox(height: 18),
-
         TextField(
           controller: usernameController,
+          enabled: !isLoading,
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'Username',
+            prefixIcon: const Icon(Icons.person_outline, color: titleRed),
             filled: true,
             fillColor: const Color(0xFFF7F8FA),
             contentPadding: const EdgeInsets.symmetric(
@@ -163,14 +214,20 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-
         const SizedBox(height: 14),
-
         TextField(
           controller: passwordController,
+          enabled: !isLoading,
           obscureText: hidePassword,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) {
+            if (!isLoading) {
+              login();
+            }
+          },
           decoration: InputDecoration(
             labelText: 'Password',
+            prefixIcon: const Icon(Icons.lock_outline, color: titleRed),
             filled: true,
             fillColor: const Color(0xFFF7F8FA),
             contentPadding: const EdgeInsets.symmetric(
@@ -185,54 +242,61 @@ class _LoginPageState extends State<LoginPage> {
               icon: Icon(
                 hidePassword ? Icons.visibility : Icons.visibility_off,
               ),
-              onPressed: () {
-                setState(() {
-                  hidePassword = !hidePassword;
-                });
-              },
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      setState(() {
+                        hidePassword = !hidePassword;
+                      });
+                    },
             ),
           ),
         ),
-
         const SizedBox(height: 18),
-
         SizedBox(
           width: double.infinity,
           height: 54,
           child: ElevatedButton(
-            onPressed: login,
+            onPressed: isLoading ? null : login,
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryRed,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: primaryRed.withOpacity(0.55),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
             ),
-            child: const Text(
-              'Masuk',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 23,
+                    height: 23,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Masuk',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ),
-
         const SizedBox(height: 8),
-
         TextButton(
-          onPressed: () {
-            setState(() {
-              showForm = false;
-            });
-          },
-          child: Text(
+          onPressed: isLoading
+              ? null
+              : () {
+                  setState(() {
+                    showForm = false;
+                  });
+                },
+          child: const Text(
             'Kembali',
-            style: TextStyle(
-              color: titleRed,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: titleRed, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -245,21 +309,15 @@ class _LoginPageState extends State<LoginPage> {
       children: [
         const Text(
           'Masuk dengan akun kampus',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
-
         const SizedBox(height: 12),
-
         const Text(
           'Gunakan akun SSO Telkom University untuk mengakses sistem peminjaman ruangan.',
           textAlign: TextAlign.center,
+          style: TextStyle(height: 1.5),
         ),
-
         const SizedBox(height: 20),
-
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -269,10 +327,7 @@ class _LoginPageState extends State<LoginPage> {
                 showForm = true;
               });
             },
-            icon: const Icon(
-              Icons.login,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.login, color: Colors.white),
             label: const Text(
               'Login SSO',
               style: TextStyle(

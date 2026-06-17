@@ -1,120 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_apb/data/room_data.dart';
 import 'package:tubes_apb/models/room_model.dart';
-import 'borrow_form_page.dart';
-import 'loan_history_page.dart';
-import 'profile_page.dart';
-import 'room_detail_page.dart';
-import 'rooms_page.dart';
-import 'schedule_page.dart';
+import 'package:tubes_apb/pages/borrow_form_page.dart';
+import 'package:tubes_apb/pages/loan_history_page.dart';
+import 'package:tubes_apb/pages/profile_page.dart';
+import 'package:tubes_apb/pages/room_detail_page.dart';
+import 'package:tubes_apb/pages/schedule_page.dart';
+import 'package:tubes_apb/services/api_service.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   static const Color primaryRed = Color(0xFFE51C23);
+
   static const Color background = Color(0xFFF8F9FB);
 
-  Room? getFirstAvailableRoom() {
-    final availableRooms =
-        RoomData.allRooms.where((room) => room.status == 'Tersedia').toList();
+  late Future<List<Room>> roomsFuture;
 
-    if (availableRooms.isEmpty) return null;
-    return availableRooms.first;
+  @override
+  void initState() {
+    super.initState();
+
+    roomsFuture = ApiService.instance.getRooms();
   }
 
-  void goToBorrowForm(BuildContext context) {
-    final room = getFirstAvailableRoom();
+  Future<void> _refreshRooms() async {
+    final newFuture = ApiService.instance.getRooms();
+
+    setState(() {
+      roomsFuture = newFuture;
+    });
+
+    await newFuture;
+  }
+
+  void _retryLoad() {
+    setState(() {
+      roomsFuture = ApiService.instance.getRooms();
+    });
+  }
+
+  bool _isRoomAvailable(Room room) {
+    final status = room.status.toLowerCase();
+
+    return status == 'tersedia' || status == 'available' || room.isActive;
+  }
+
+  List<Room> _getRecommendedRooms(List<Room> rooms) {
+    final availableRooms = rooms.where(_isRoomAvailable).take(4).toList();
+
+    if (availableRooms.isNotEmpty) {
+      return availableRooms;
+    }
+
+    return rooms.take(4).toList();
+  }
+
+  Room? _getFirstAvailableRoom(List<Room> rooms) {
+    for (final room in rooms) {
+      if (_isRoomAvailable(room)) {
+        return room;
+      }
+    }
+
+    if (rooms.isNotEmpty) {
+      return rooms.first;
+    }
+
+    return null;
+  }
+
+  Future<void> _goToBorrowForm(List<Room> rooms) async {
+    final room = _getFirstAvailableRoom(rooms);
 
     if (room == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Belum ada ruangan yang tersedia untuk dipinjam.'),
-        ),
-      );
+      _showMessage('Belum ada ruangan yang tersedia untuk dipinjam.');
+
       return;
     }
 
-    Navigator.push(
+    await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => BorrowFormPage(room: room),
+      MaterialPageRoute(builder: (_) => BorrowFormPage(room: room)),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _refreshRooms();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: primaryRed,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final List<Room> recommendedRooms = RoomData.allRooms
-        .where((room) => room.status == 'Tersedia')
-        .take(4)
-        .toList();
-
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              elevation: 0,
-              backgroundColor: background,
-              automaticallyImplyLeading: false,
-              titleSpacing: 0,
-              title: _buildStickyHeader(context),
-            ),
-            SliverList(
-              delegate: SliverChildListDelegate(
-                [
-                  const SizedBox(height: 16),
-
-                  _buildHeroCard(context),
-
-                  const SizedBox(height: 24),
-
-                  _sectionTitle('Fitur'),
-
-                  const SizedBox(height: 12),
-
-                  _buildFeaturePanel(context),
-
-                  const SizedBox(height: 24),
-
-                  _sectionTitleWithAction(
-                    title: 'Ruang Terbaik & Rekomendasi',
-                    action: 'Lihat semua >',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RoomsPage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _buildRecommendationList(context, recommendedRooms),
-
-                  const SizedBox(height: 24),
-
-                  _sectionTitle('Feedback Pengguna'),
-
-                  const SizedBox(height: 12),
-
-                  _buildFeedbackSection(),
-
-                  const SizedBox(height: 28),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStickyHeader(BuildContext context) {
+  Widget _stickyHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Row(
@@ -132,39 +125,34 @@ class HomePage extends StatelessWidget {
               size: 22,
             ),
           ),
-
           const SizedBox(width: 10),
-
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1,
+          const Expanded(
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Inst4',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  TextSpan(
+                    text: 'Class',
+                    style: TextStyle(color: primaryRed),
+                  ),
+                ],
               ),
-              children: [
-                TextSpan(
-                  text: 'Inst4',
-                  style: TextStyle(color: Colors.black87),
-                ),
-                TextSpan(
-                  text: 'Class',
-                  style: TextStyle(color: primaryRed),
-                ),
-              ],
             ),
           ),
-
-          const Spacer(),
-
           InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfilePage(),
-                ),
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
               );
             },
             child: Container(
@@ -198,18 +186,14 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard(BuildContext context) {
+  Widget _heroCard(List<Room> rooms) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 18),
       height: 230,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFF3B45),
-            Color(0xFFE51C23),
-            Color(0xFFD90416),
-          ],
+          colors: [Color(0xFFFF3B45), Color(0xFFE51C23), Color(0xFFD90416)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -237,7 +221,6 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
-
             Positioned(
               right: 18,
               bottom: 20,
@@ -247,7 +230,6 @@ class HomePage extends StatelessWidget {
                 color: Colors.white.withOpacity(0.18),
               ),
             ),
-
             Positioned(
               right: 28,
               top: 35,
@@ -257,9 +239,6 @@ class HomePage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.16),
                   borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.20),
-                  ),
                 ),
                 child: const Icon(
                   Icons.meeting_room_rounded,
@@ -268,7 +247,6 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
@@ -284,7 +262,7 @@ class HomePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Text(
-                      'Hai, Dewa 👋',
+                      'Selamat datang 👋',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 13,
@@ -292,9 +270,7 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 14),
-
                   const Text(
                     'Temukan ruangan\nterbaik untuk\nkegiatanmu',
                     style: TextStyle(
@@ -305,12 +281,12 @@ class HomePage extends StatelessWidget {
                       letterSpacing: -0.4,
                     ),
                   ),
-
                   const Spacer(),
-
                   InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () => goToBorrowForm(context),
+                    onTap: () {
+                      _goToBorrowForm(rooms);
+                    },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -326,24 +302,19 @@ class HomePage extends StatelessWidget {
                           child: const Text(
                             'Pinjam mudah & cepat',
                             style: TextStyle(
-                              color: Color(0xFFE51C23),
+                              color: primaryRed,
                               fontWeight: FontWeight.w900,
                               fontSize: 12,
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 10),
-
                         Container(
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.14),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.18),
-                            ),
                           ),
                           child: const Icon(
                             Icons.arrow_forward_rounded,
@@ -377,43 +348,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitleWithAction({
-    required String title,
-    required String action,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-
-          InkWell(
-            onTap: onTap,
-            child: Text(
-              action,
-              style: const TextStyle(
-                color: primaryRed,
-                fontWeight: FontWeight.w900,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeaturePanel(BuildContext context) {
+  Widget _featurePanel() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 18),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
@@ -429,25 +364,13 @@ class HomePage extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _featureItem(
-            icon: Icons.meeting_room_rounded,
-            title: 'Ruangan',
-            color: primaryRed,
-            bgColor: const Color(0xFFFFE5E7),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RoomsPage()),
-              );
-            },
-          ),
           _featureItem(
             icon: Icons.calendar_month_rounded,
             title: 'Jadwal',
             color: Colors.orange,
-            bgColor: const Color(0xFFFFF0DA),
+            backgroundColor: const Color(0xFFFFF0DA),
             onTap: () {
               Navigator.push(
                 context,
@@ -459,7 +382,7 @@ class HomePage extends StatelessWidget {
             icon: Icons.history_rounded,
             title: 'Riwayat',
             color: Colors.blue,
-            bgColor: const Color(0xFFE7F2FF),
+            backgroundColor: const Color(0xFFE7F2FF),
             onTap: () {
               Navigator.push(
                 context,
@@ -476,40 +399,30 @@ class HomePage extends StatelessWidget {
     required IconData icon,
     required String title,
     required Color color,
-    required Color bgColor,
+    required Color backgroundColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: SizedBox(
-        width: 90,
+        width: 110,
         child: Column(
           children: [
             Container(
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: bgColor,
+                color: backgroundColor,
                 borderRadius: BorderRadius.circular(17),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 28),
             ),
-
             const SizedBox(height: 8),
-
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                height: 1.2,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
             ),
           ],
         ),
@@ -517,7 +430,32 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecommendationList(BuildContext context, List<Room> rooms) {
+  Widget _recommendationList(List<Room> rooms) {
+    if (rooms.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.meeting_room_outlined,
+              size: 52,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Belum ada data ruangan',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SizedBox(
       height: 230,
       child: ListView.builder(
@@ -525,13 +463,13 @@ class HomePage extends StatelessWidget {
         padding: const EdgeInsets.only(left: 18, right: 8),
         itemCount: rooms.length,
         itemBuilder: (context, index) {
-          return _recommendationCard(context, rooms[index]);
+          return _recommendationCard(rooms[index]);
         },
       ),
     );
   }
 
-  Widget _recommendationCard(BuildContext context, Room room) {
+  Widget _recommendationCard(Room room) {
     return Container(
       width: 190,
       margin: const EdgeInsets.only(right: 14),
@@ -551,9 +489,7 @@ class HomePage extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => RoomDetailPage(room: room),
-            ),
+            MaterialPageRoute(builder: (_) => RoomDetailPage(room: room)),
           );
         },
         child: Column(
@@ -563,21 +499,18 @@ class HomePage extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(22),
               ),
-              child: Image.network(
-                room.imageUrl,
-                height: 112,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
-                  return Container(
-                    height: 112,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.meeting_room),
-                  );
-                },
-              ),
+              child: room.imageUrl.isNotEmpty
+                  ? Image.network(
+                      room.imageUrl,
+                      height: 112,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _roomPlaceholder();
+                      },
+                    )
+                  : _roomPlaceholder(),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: Column(
@@ -592,9 +525,7 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-
                   const SizedBox(height: 6),
-
                   Text(
                     'Kapasitas ${room.capacity} orang',
                     style: const TextStyle(
@@ -603,23 +534,35 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  const Row(
+                  const SizedBox(height: 11),
+                  Row(
                     children: [
                       Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
+                        _isRoomAvailable(room)
+                            ? Icons.check_circle_rounded
+                            : Icons.cancel_rounded,
+                        color: _isRoomAvailable(room)
+                            ? Colors.green
+                            : Colors.red,
                         size: 17,
                       ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Tersedia',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          room.status.isEmpty
+                              ? (_isRoomAvailable(room)
+                                    ? 'Tersedia'
+                                    : 'Tidak tersedia')
+                              : room.status,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _isRoomAvailable(room)
+                                ? Colors.green
+                                : Colors.red,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ],
@@ -633,29 +576,39 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeedbackSection() {
+  Widget _roomPlaceholder() {
+    return Container(
+      height: 112,
+      width: double.infinity,
+      color: const Color(0xFFFFE5E7),
+      child: const Icon(
+        Icons.meeting_room_rounded,
+        color: primaryRed,
+        size: 42,
+      ),
+    );
+  }
+
+  Widget _feedbackSection() {
     final feedbacks = [
       {
         'name': 'Ahmad Dewa',
         'role': 'Mahasiswa Teknologi Informasi',
-        'text':
-            'Peminjaman ruangan jadi lebih cepat dan tidak perlu tanya admin manual lagi.',
+        'text': 'Peminjaman ruangan menjadi lebih cepat dan mudah.',
         'rating': 5,
         'initial': 'AD',
       },
       {
         'name': 'Salsa Putri',
         'role': 'Mahasiswa Sistem Informasi',
-        'text':
-            'Aplikasinya membantu banget buat cek ruangan kosong sebelum kegiatan kelompok.',
+        'text': 'Aplikasi membantu mengecek ruangan yang tersedia.',
         'rating': 5,
         'initial': 'SP',
       },
       {
         'name': 'Rizky Pratama',
         'role': 'Mahasiswa Informatika',
-        'text':
-            'Tampilan aplikasinya simpel, jelas, dan proses pengajuan pinjam ruangannya mudah dipahami.',
+        'text': 'Tampilan jelas dan proses peminjaman mudah dipahami.',
         'rating': 4,
         'initial': 'RP',
       },
@@ -677,60 +630,31 @@ class HomePage extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.055),
-                  blurRadius: 16,
-                  offset: const Offset(0, 7),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFD32F2F),
-                            Color(0xFFF44336),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          item['initial'].toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                    CircleAvatar(
+                      backgroundColor: primaryRed,
+                      child: Text(
+                        item['initial'].toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             item['name'].toString(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
-                          const SizedBox(height: 3),
                           Text(
                             item['role'].toString(),
                             maxLines: 1,
@@ -738,7 +662,6 @@ class HomePage extends StatelessWidget {
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -746,28 +669,21 @@ class HomePage extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
-
                 Row(
-                  children: List.generate(
-                    5,
-                    (starIndex) {
-                      final rating = item['rating'] as int;
+                  children: List.generate(5, (starIndex) {
+                    final rating = item['rating'] as int;
 
-                      return Icon(
-                        starIndex < rating
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: Colors.orange,
-                        size: 19,
-                      );
-                    },
-                  ),
+                    return Icon(
+                      starIndex < rating
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: Colors.orange,
+                      size: 19,
+                    );
+                  }),
                 ),
-
                 const SizedBox(height: 10),
-
                 Expanded(
                   child: Text(
                     '"${item['text']}"',
@@ -777,7 +693,6 @@ class HomePage extends StatelessWidget {
                       color: Colors.grey[700],
                       height: 1.45,
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -785,6 +700,107 @@ class HomePage extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _loadingState() {
+    return const SliverFillRemaining(
+      child: Center(child: CircularProgressIndicator(color: primaryRed)),
+    );
+  }
+
+  Widget _errorState(Object? error) {
+    final message = error is ApiException
+        ? error.message
+        : 'Data ruangan gagal dimuat.';
+
+    return SliverFillRemaining(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cloud_off_rounded, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 14),
+              const Text(
+                'Gagal memuat beranda',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: _retryLoad,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Coba Lagi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryRed,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: background,
+      body: SafeArea(
+        child: FutureBuilder<List<Room>>(
+          future: roomsFuture,
+          builder: (context, snapshot) {
+            final rooms = snapshot.data ?? [];
+            final recommendedRooms = _getRecommendedRooms(rooms);
+
+            return RefreshIndicator(
+              color: primaryRed,
+              onRefresh: _refreshRooms,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    pinned: true,
+                    elevation: 0,
+                    backgroundColor: background,
+                    automaticallyImplyLeading: false,
+                    titleSpacing: 0,
+                    title: _stickyHeader(),
+                  ),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    _loadingState()
+                  else if (snapshot.hasError)
+                    _errorState(snapshot.error)
+                  else
+                    SliverList(
+                      delegate: SliverChildListDelegate([
+                        const SizedBox(height: 16),
+                        _heroCard(rooms),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Fitur'),
+                        const SizedBox(height: 12),
+                        _featurePanel(),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Ruang Terbaik & Rekomendasi'),
+                        const SizedBox(height: 12),
+                        _recommendationList(recommendedRooms),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Feedback Pengguna'),
+                        const SizedBox(height: 12),
+                        _feedbackSection(),
+                        const SizedBox(height: 28),
+                      ]),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

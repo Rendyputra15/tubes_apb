@@ -16,22 +16,8 @@ class RoomCard extends StatelessWidget {
   static const Color primaryRed = Color(0xFFD32F2F);
   static const Color titleRed = Color(0xFFE51C23);
 
-  Color getStatusColor(String status) {
-    switch (status) {
-      case 'Tersedia':
-        return Colors.green;
-      case 'Terpakai':
-        return primaryRed;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final statusColor = getStatusColor(room.status);
-    final bool isAvailable = room.status == 'Tersedia';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -51,125 +37,168 @@ class RoomCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  room.imageUrl,
-                  width: 96,
-                  height: 96,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
-                    return Container(
-                      width: 96,
-                      height: 96,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported),
-                    );
-                  },
-                ),
-              ),
-
+              _buildRoomImage(),
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      room.name,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            room.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFFFEBEE,
+                            ),
+                            borderRadius:
+                                BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            room.code,
+                            style: const TextStyle(
+                              color: titleRed,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      room.location,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 17,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            room.location,
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      'Kapasitas ${room.capacity} orang',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                      ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.layers_outlined,
+                          size: 17,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Lantai ${room.floor}',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Icon(
+                          Icons.people_outline_rounded,
+                          size: 17,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${room.capacity} orang',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(height: 8),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        room.status,
+                    if (room.facilities.isNotEmpty) ...[
+                      const SizedBox(height: 9),
+                      Text(
+                        _facilityText(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
+                          color: Colors.grey[600],
+                          fontSize: 12,
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 10),
-
+                    ],
+                    const SizedBox(height: 11),
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
                             onPressed: onDetailTap,
-                            style: OutlinedButton.styleFrom(
+                            style:
+                                OutlinedButton.styleFrom(
                               foregroundColor: titleRed,
                               side: const BorderSide(
                                 color: titleRed,
                                 width: 1.3,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                              shape:
+                                  RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  14,
+                                ),
                               ),
                             ),
                             child: const Text(
                               'Detail',
                               style: TextStyle(
                                 color: titleRed,
-                                fontWeight: FontWeight.w800,
+                                fontWeight:
+                                    FontWeight.w800,
                               ),
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 8),
-
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: isAvailable ? onBorrowTap : null,
-                            style: ElevatedButton.styleFrom(
+                            onPressed: onBorrowTap,
+                            style:
+                                ElevatedButton.styleFrom(
                               backgroundColor: primaryRed,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor: Colors.grey.shade400,
-                              disabledForegroundColor: Colors.white,
                               elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                              shape:
+                                  RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  14,
+                                ),
                               ),
                             ),
                             child: const Text(
                               'Pinjam',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.w900,
+                                fontWeight:
+                                    FontWeight.w900,
                               ),
                             ),
                           ),
@@ -184,5 +213,51 @@ class RoomCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildRoomImage() {
+    if (room.imageUrl.trim().isEmpty) {
+      return _imagePlaceholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Image.network(
+        room.imageUrl,
+        width: 96,
+        height: 126,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return _imagePlaceholder();
+        },
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      width: 96,
+      height: 126,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(
+        Icons.meeting_room_rounded,
+        color: primaryRed,
+        size: 42,
+      ),
+    );
+  }
+
+  String _facilityText() {
+    final visibleFacilities =
+        room.facilities.take(3).join(' • ');
+
+    if (room.facilities.length > 3) {
+      return '$visibleFacilities • lainnya';
+    }
+
+    return visibleFacilities;
   }
 }

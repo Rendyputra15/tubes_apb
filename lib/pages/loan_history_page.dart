@@ -1,69 +1,156 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_apb/data/app_state.dart';
 import 'package:tubes_apb/models/loan_record_model.dart';
+import 'package:tubes_apb/services/api_service.dart';
 import 'package:tubes_apb/widgets/app_header.dart';
 
-class LoanHistoryPage extends StatefulWidget {
-  const LoanHistoryPage({super.key});
+class LoanHistoryPage
+    extends StatefulWidget {
+  const LoanHistoryPage({
+    super.key,
+  });
 
   @override
-  State<LoanHistoryPage> createState() => _LoanHistoryPageState();
+  State<LoanHistoryPage> createState() =>
+      _LoanHistoryPageState();
 }
 
-class _LoanHistoryPageState extends State<LoanHistoryPage> {
+class _LoanHistoryPageState
+    extends State<LoanHistoryPage> {
+  static const Color primaryRed =
+      Color(0xFFD32F2F);
+
+  static const Color titleRed =
+      Color(0xFFE51C23);
+
+  static const Color softRed =
+      Color(0xFFFFE3E3);
+
   String selectedTab = 'Semua';
 
-  static const Color primaryRed = Color(0xFFD32F2F);
-  static const Color titleRed = Color(0xFFE51C23);
-  static const Color softRed = Color(0xFFFFE3E3);
+  late Future<List<LoanRecord>>
+      bookingsFuture;
 
-  Color statusColor(String status) {
+  final List<String> tabs = const [
+    'Semua',
+    'Menunggu',
+    'Dikonfirmasi',
+    'Ditolak',
+    'Selesai',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    bookingsFuture =
+        ApiService.instance.getBookings();
+  }
+
+  Future<void> _refreshBookings() async {
+    final newFuture =
+        ApiService.instance.getBookings();
+
+    setState(() {
+      bookingsFuture = newFuture;
+    });
+
+    await newFuture;
+  }
+
+  void _retryLoad() {
+    setState(() {
+      bookingsFuture =
+          ApiService.instance.getBookings();
+    });
+  }
+
+  List<LoanRecord> _filterBookings(
+    List<LoanRecord> bookings,
+  ) {
+    if (selectedTab == 'Semua') {
+      return bookings;
+    }
+
+    return bookings
+        .where(
+          (booking) =>
+              booking.status ==
+              selectedTab,
+        )
+        .toList();
+  }
+
+  Color _statusColor(String status) {
     switch (status) {
       case 'Menunggu':
         return Colors.orange;
+
       case 'Dikonfirmasi':
         return Colors.green;
+
+      case 'Ditolak':
+        return primaryRed;
+
       case 'Selesai':
         return Colors.blue;
+
+      case 'Dibatalkan':
+        return Colors.grey;
+
       default:
         return Colors.grey;
     }
   }
 
-  IconData statusIcon(String status) {
+  IconData _statusIcon(String status) {
     switch (status) {
       case 'Menunggu':
         return Icons.hourglass_top_rounded;
+
       case 'Dikonfirmasi':
         return Icons.check_circle_rounded;
+
+      case 'Ditolak':
+        return Icons.cancel_rounded;
+
       case 'Selesai':
         return Icons.task_alt_rounded;
+
+      case 'Dibatalkan':
+        return Icons.block_rounded;
+
       default:
-        return Icons.assignment_turned_in_rounded;
+        return Icons.info_rounded;
     }
   }
 
-  String statusDescription(String status) {
+  String _statusDescription(
+    String status,
+  ) {
     switch (status) {
       case 'Menunggu':
         return 'Pengajuan masih menunggu verifikasi dari admin.';
+
       case 'Dikonfirmasi':
-        return 'Pengajuan sudah disetujui. Silakan gunakan ruangan sesuai jadwal.';
+        return 'Pengajuan sudah disetujui. Gunakan ruangan sesuai jadwal.';
+
+      case 'Ditolak':
+        return 'Pengajuan peminjaman ditolak oleh admin.';
+
       case 'Selesai':
-        return 'Peminjaman ruangan sudah selesai digunakan.';
+        return 'Peminjaman ruangan sudah selesai.';
+
+      case 'Dibatalkan':
+        return 'Pengajuan peminjaman telah dibatalkan.';
+
       default:
         return 'Status peminjaman belum tersedia.';
     }
   }
 
-  List<LoanRecord> get filteredLoans {
-    final all = AppState.loanHistory;
-    if (selectedTab == 'Semua') return all;
-    return all.where((loan) => loan.status == selectedTab).toList();
-  }
-
-  Widget tabChip(String text) {
-    final selected = selectedTab == text;
+  Widget _tabChip(String text) {
+    final selected =
+        selectedTab == text;
 
     return GestureDetector(
       onTap: () {
@@ -72,18 +159,32 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        margin: const EdgeInsets.only(right: 9),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+        duration: const Duration(
+          milliseconds: 220,
+        ),
+        margin: const EdgeInsets.only(
+          right: 9,
+        ),
+        padding:
+            const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
-          color: selected ? titleRed : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color:
+              selected ? titleRed : Colors.white,
+          borderRadius:
+              BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? titleRed : Colors.grey.shade200,
+            color: selected
+                ? titleRed
+                : Colors.grey.shade200,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(
+                0.04,
+              ),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -92,7 +193,9 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
         child: Text(
           text,
           style: TextStyle(
-            color: selected ? Colors.white : Colors.black87,
+            color: selected
+                ? Colors.white
+                : Colors.black87,
             fontWeight: FontWeight.w900,
             fontSize: 13,
           ),
@@ -101,18 +204,40 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
     );
   }
 
-  Widget summaryCard() {
-    final total = AppState.loanHistory.length;
-    final waiting =
-        AppState.loanHistory.where((loan) => loan.status == 'Menunggu').length;
-    final approved = AppState.loanHistory
-        .where((loan) => loan.status == 'Dikonfirmasi')
+  Widget _summaryCard(
+    List<LoanRecord> bookings,
+  ) {
+    final total = bookings.length;
+
+    final waiting = bookings
+        .where(
+          (item) =>
+              item.status == 'Menunggu',
+        )
         .length;
-    final done =
-        AppState.loanHistory.where((loan) => loan.status == 'Selesai').length;
+
+    final approved = bookings
+        .where(
+          (item) =>
+              item.status ==
+              'Dikonfirmasi',
+        )
+        .length;
+
+    final done = bookings
+        .where(
+          (item) =>
+              item.status == 'Selesai',
+        )
+        .length;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      margin: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        6,
+      ),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -120,13 +245,14 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
             Color(0xFFD32F2F),
             Color(0xFFF44336),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius:
+            BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryRed.withOpacity(0.22),
+            color: primaryRed.withOpacity(
+              0.22,
+            ),
             blurRadius: 16,
             offset: const Offset(0, 7),
           ),
@@ -138,8 +264,11 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(18),
+              color: Colors.white.withOpacity(
+                0.18,
+              ),
+              borderRadius:
+                  BorderRadius.circular(18),
             ),
             child: const Icon(
               Icons.history_rounded,
@@ -150,14 +279,16 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Ringkasan Peminjaman',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight:
+                        FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -167,7 +298,8 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
                     color: Colors.white70,
                     fontSize: 12,
                     height: 1.4,
-                    fontWeight: FontWeight.w600,
+                    fontWeight:
+                        FontWeight.w600,
                   ),
                 ),
               ],
@@ -178,31 +310,260 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
     );
   }
 
-  Widget detailRow({
+  Widget _bookingCard(
+    LoanRecord booking,
+  ) {
+    final color =
+        _statusColor(booking.status);
+
+    return Container(
+      margin: const EdgeInsets.only(
+        bottom: 14,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              0.05,
+            ),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          _showBookingDetail(booking);
+        },
+        borderRadius:
+            BorderRadius.circular(22),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(
+                        0.12,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(
+                        16,
+                      ),
+                    ),
+                    child: Icon(
+                      _statusIcon(
+                        booking.status,
+                      ),
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          booking.roomName,
+                          style:
+                              const TextStyle(
+                            fontSize: 17,
+                            fontWeight:
+                                FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          booking.code,
+                          style: TextStyle(
+                            color:
+                                Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight:
+                                FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(
+                        0.12,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(
+                        14,
+                      ),
+                    ),
+                    child: Text(
+                      booking.status,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight:
+                            FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              const Divider(height: 1),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: _smallInfo(
+                      icon: Icons
+                          .calendar_month_rounded,
+                      label: 'Tanggal',
+                      value:
+                          booking.dateText,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _smallInfo(
+                      icon: Icons
+                          .access_time_rounded,
+                      label: 'Waktu',
+                      value:
+                          booking.timeText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _smallInfo(
+                icon:
+                    Icons.description_rounded,
+                label: 'Keperluan',
+                value: booking.purpose,
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment:
+                    Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    _showBookingDetail(
+                      booking,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons
+                        .visibility_outlined,
+                    size: 18,
+                  ),
+                  label:
+                      const Text('Lihat Detail'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: titleRed,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _smallInfo({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 19,
+          color: titleRed,
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 11,
+                  fontWeight:
+                      FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                maxLines: 2,
+                overflow:
+                    TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight:
+                      FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _detailRow({
     required IconData icon,
     required String label,
     required String value,
     required Color color,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(
+        bottom: 12,
+      ),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8FA),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: color.withOpacity(0.07),
-        ),
+        borderRadius:
+            BorderRadius.circular(18),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(13),
+              color:
+                  color.withOpacity(0.12),
+              borderRadius:
+                  BorderRadius.circular(13),
             ),
             child: Icon(
               icon,
@@ -213,23 +574,27 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color:
+                        Colors.grey[600],
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight:
+                        FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value,
+                  value.isEmpty ? '-' : value,
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                    fontWeight:
+                        FontWeight.w800,
                     height: 1.4,
                   ),
                 ),
@@ -241,271 +606,343 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
     );
   }
 
-  void showLoanDetail(BuildContext context, LoanRecord loan) {
-    final color = statusColor(loan.status);
+  void _showBookingDetail(
+    LoanRecord booking,
+  ) {
+    final color =
+        _statusColor(booking.status);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor:
+          Colors.transparent,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.88,
-            ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(32),
-                bottom: Radius.circular(26),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          builder: (
+            context,
+            scrollController,
+          ) {
+            return Container(
+              decoration:
+                  const BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
               ),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
+                controller:
+                    scrollController,
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  20,
+                  12,
+                  20,
+                  28,
+                ),
                 children: [
                   Center(
                     child: Container(
-                      width: 44,
+                      width: 45,
                       height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(20),
+                      decoration:
+                          BoxDecoration(
+                        color:
+                            Colors.grey[300],
+                        borderRadius:
+                            BorderRadius.circular(
+                          20,
+                        ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 22),
-
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
+                    padding:
+                        const EdgeInsets.all(
+                      18,
+                    ),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withOpacity(0.16),
-                          color.withOpacity(0.06),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      color:
+                          color.withOpacity(
+                        0.10,
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: color.withOpacity(0.18),
+                      borderRadius:
+                          BorderRadius.circular(
+                        24,
                       ),
                     ),
                     child: Column(
                       children: [
-                        Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
-                            shape: BoxShape.circle,
+                        Icon(
+                          _statusIcon(
+                            booking.status,
                           ),
-                          child: Icon(
-                            statusIcon(loan.status),
-                            color: color,
-                            size: 38,
-                          ),
+                          color: color,
+                          size: 54,
                         ),
-
-                        const SizedBox(height: 14),
-
+                        const SizedBox(
+                          height: 12,
+                        ),
                         const Text(
                           'Detail Peminjaman',
-                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 21,
+                            fontWeight:
+                                FontWeight.w900,
                           ),
                         ),
-
-                        const SizedBox(height: 6),
-
+                        const SizedBox(
+                          height: 5,
+                        ),
                         Text(
-                          loan.roomName,
-                          textAlign: TextAlign.center,
+                          booking.roomName,
                           style: TextStyle(
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w700,
+                            color:
+                                Colors.grey[700],
+                            fontWeight:
+                                FontWeight.w700,
                           ),
                         ),
-
-                        const SizedBox(height: 14),
-
+                        const SizedBox(
+                          height: 12,
+                        ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding:
+                              const EdgeInsets
+                                  .symmetric(
                             horizontal: 14,
                             vertical: 8,
                           ),
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(16),
+                          decoration:
+                              BoxDecoration(
+                            color: color
+                                .withOpacity(
+                              0.15,
+                            ),
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              16,
+                            ),
                           ),
                           child: Text(
-                            loan.status,
+                            booking.status,
                             style: TextStyle(
                               color: color,
-                              fontWeight: FontWeight.w900,
+                              fontWeight:
+                                  FontWeight
+                                      .w900,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 18),
-
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(15),
+                    padding:
+                        const EdgeInsets.all(
+                      15,
+                    ),
                     decoration: BoxDecoration(
-                      color: softRed.withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(18),
+                      color: softRed,
+                      borderRadius:
+                          BorderRadius.circular(
+                        18,
+                      ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          statusIcon(loan.status),
-                          color: color,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            statusDescription(loan.status),
-                            style: TextStyle(
-                              color: Colors.grey[800],
-                              height: 1.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      _statusDescription(
+                        booking.status,
+                      ),
+                      style: const TextStyle(
+                        height: 1.5,
+                        fontWeight:
+                            FontWeight.w600,
+                      ),
                     ),
                   ),
-
                   const SizedBox(height: 18),
-
-                  const Text(
-                    'Informasi Peminjaman',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  detailRow(
-                    icon: Icons.confirmation_number_rounded,
-                    label: 'Kode Peminjaman',
-                    value: loan.code,
+                  _detailRow(
+                    icon: Icons
+                        .confirmation_number_rounded,
+                    label:
+                        'Kode Peminjaman',
+                    value: booking.code,
                     color: titleRed,
                   ),
-                  detailRow(
-                    icon: Icons.meeting_room_rounded,
+                  _detailRow(
+                    icon: Icons
+                        .meeting_room_rounded,
                     label: 'Ruangan',
-                    value: loan.roomName,
-                    color: Colors.deepPurple,
+                    value:
+                        booking.roomName,
+                    color:
+                        Colors.deepPurple,
                   ),
-                  detailRow(
-                    icon: Icons.calendar_month_rounded,
+                  _detailRow(
+                    icon: Icons
+                        .calendar_month_rounded,
                     label: 'Tanggal',
-                    value: loan.dateText,
+                    value:
+                        booking.dateText,
                     color: Colors.blue,
                   ),
-                  detailRow(
-                    icon: Icons.access_time_filled_rounded,
+                  _detailRow(
+                    icon: Icons
+                        .access_time_rounded,
                     label: 'Waktu',
-                    value: loan.timeText,
+                    value:
+                        booking.timeText,
                     color: Colors.orange,
                   ),
-                  detailRow(
-                    icon: Icons.groups_rounded,
-                    label: 'Jumlah Peserta',
-                    value: '${loan.participantCount} orang',
+                  _detailRow(
+                    icon:
+                        Icons.groups_rounded,
+                    label:
+                        'Jumlah Peserta',
+                    value:
+                        '${booking.participantCount} orang',
                     color: Colors.green,
                   ),
-                  detailRow(
-                    icon: Icons.description_rounded,
+                  _detailRow(
+                    icon: Icons
+                        .description_rounded,
                     label: 'Keperluan',
-                    value: loan.purpose,
+                    value:
+                        booking.purpose,
                     color: titleRed,
                   ),
-                  detailRow(
-                    icon: Icons.badge_rounded,
-                    label: 'File Kartu Mahasiswa',
-                    value: loan.studentCardFile,
-                    color: Colors.teal,
-                  ),
-
-                  const SizedBox(height: 10),
-
+                  if (booking
+                      .note.isNotEmpty)
+                    _detailRow(
+                      icon:
+                          Icons.notes_rounded,
+                      label: 'Catatan',
+                      value:
+                          booking.note,
+                      color: Colors.teal,
+                    ),
+                  if (booking
+                      .rejectionReason
+                      .isNotEmpty)
+                    _detailRow(
+                      icon: Icons
+                          .report_problem_rounded,
+                      label:
+                          'Alasan Penolakan',
+                      value: booking
+                          .rejectionReason,
+                      color: primaryRed,
+                    ),
+                  const SizedBox(height: 8),
                   SizedBox(
-                    width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(
+                          context,
+                        );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: titleRed,
-                        foregroundColor: Colors.white,
+                      style:
+                          ElevatedButton.styleFrom(
+                        backgroundColor:
+                            titleRed,
+                        foregroundColor:
+                            Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(17),
+                        shape:
+                            RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius
+                                  .circular(
+                            16,
+                          ),
                         ),
                       ),
                       child: const Text(
-                        'Tutup Detail',
+                        'Tutup',
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                          fontWeight:
+                              FontWeight.w900,
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget emptyHistory() {
+  Widget _loadingState() {
+    return const Center(
+      child:
+          CircularProgressIndicator(
+        color: primaryRed,
+      ),
+    );
+  }
+
+  Widget _errorState(Object? error) {
+    final message =
+        error is ApiException
+            ? error.message
+            : 'Terjadi kesalahan saat mengambil riwayat.';
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding:
+            const EdgeInsets.all(28),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
             Icon(
-              Icons.history_toggle_off_rounded,
+              Icons.cloud_off_rounded,
               size: 64,
               color: Colors.grey[400],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             const Text(
-              'Belum ada riwayat',
+              'Gagal memuat riwayat',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w900,
+                fontWeight:
+                    FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 7),
             Text(
-              'Riwayat peminjaman dengan status $selectedTab belum tersedia.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              message,
+              textAlign:
+                  TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed: _retryLoad,
+              icon: const Icon(
+                Icons.refresh_rounded,
+              ),
+              label:
+                  const Text('Coba Lagi'),
+              style:
+                  ElevatedButton.styleFrom(
+                backgroundColor:
+                    primaryRed,
+                foregroundColor:
+                    Colors.white,
+              ),
             ),
           ],
         ),
@@ -513,191 +950,37 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
     );
   }
 
-  Widget loanCard(BuildContext context, LoanRecord loan) {
-    final color = statusColor(loan.status);
-
-    return InkWell(
-      onTap: () {
-        showLoanDetail(context, loan);
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: color.withOpacity(0.08),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.045),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
+  Widget _emptyState() {
+    return Center(
+      child: Padding(
+        padding:
+            const EdgeInsets.all(28),
         child: Column(
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(
-                    statusIcon(loan.status),
-                    color: color,
-                    size: 29,
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        loan.roomName,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        loan.code,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    loan.status,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
+            Icon(
+              Icons
+                  .history_toggle_off_rounded,
+              size: 64,
+              color: Colors.grey[400],
             ),
-
             const SizedBox(height: 14),
-
-            Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FB),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_month_rounded,
-                          size: 18,
-                          color: titleRed,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            loan.dateText,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 24,
-                    color: Colors.grey.shade300,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.access_time_filled_rounded,
-                          size: 18,
-                          color: titleRed,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            loan.timeText,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            const Text(
+              'Riwayat masih kosong',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight:
+                    FontWeight.w900,
               ),
             ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Icon(
-                  Icons.groups_rounded,
-                  color: Colors.grey[600],
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '${loan.participantCount} peserta',
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Lihat detail',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: color,
-                  size: 20,
-                ),
-              ],
+            const SizedBox(height: 7),
+            Text(
+              selectedTab == 'Semua'
+                  ? 'Belum ada pengajuan peminjaman ruangan.'
+                  : 'Tidak ada peminjaman dengan status $selectedTab.',
+              textAlign:
+                  TextAlign.center,
             ),
           ],
         ),
@@ -706,87 +989,119 @@ class _LoanHistoryPageState extends State<LoanHistoryPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final loans = filteredLoans;
-
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor:
+          const Color(0xFFF8F9FB),
       body: SafeArea(
         child: Column(
           children: [
             const AppHeader(
-              title: 'Riwayat Pinjaman',
-              subtitle: 'Catatan seluruh peminjaman ruangan',
-              icon: Icons.history_rounded,
+              title:
+                  'Riwayat Peminjaman',
+              subtitle:
+                  'Lihat seluruh pengajuan peminjaman ruangan',
+              icon:
+                  Icons.history_rounded,
               showBackButton: true,
             ),
-
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  summaryCard(),
+              child: FutureBuilder<
+                  List<LoanRecord>>(
+                future: bookingsFuture,
+                builder: (
+                  context,
+                  snapshot,
+                ) {
+                  if (snapshot
+                          .connectionState ==
+                      ConnectionState
+                          .waiting) {
+                    return _loadingState();
+                  }
 
-                  const SizedBox(height: 10),
+                  if (snapshot.hasError) {
+                    return _errorState(
+                      snapshot.error,
+                    );
+                  }
 
-                  SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        tabChip('Semua'),
-                        tabChip('Menunggu'),
-                        tabChip('Dikonfirmasi'),
-                        tabChip('Selesai'),
-                      ],
-                    ),
-                  ),
+                  final bookings =
+                      snapshot.data ?? [];
 
-                  const SizedBox(height: 14),
+                  final filtered =
+                      _filterBookings(
+                    bookings,
+                  );
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Daftar Riwayat',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${loans.length} item',
-                          style: const TextStyle(
-                            color: titleRed,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (loans.isEmpty)
-                    SizedBox(
-                      height: 300,
-                      child: emptyHistory(),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children:
-                            loans.map((loan) => loanCard(context, loan)).toList(),
+                  return Column(
+                    children: [
+                      _summaryCard(
+                        bookings,
                       ),
-                    ),
-
-                  const SizedBox(height: 22),
-                ],
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      SizedBox(
+                        height: 46,
+                        child: ListView(
+                          padding:
+                              const EdgeInsets
+                                  .symmetric(
+                            horizontal: 16,
+                          ),
+                          scrollDirection:
+                              Axis.horizontal,
+                          children: tabs
+                              .map(
+                                _tabChip,
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 14,
+                      ),
+                      Expanded(
+                        child:
+                            filtered.isEmpty
+                                ? _emptyState()
+                                : RefreshIndicator(
+                                    color:
+                                        primaryRed,
+                                    onRefresh:
+                                        _refreshBookings,
+                                    child:
+                                        ListView.builder(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(
+                                        16,
+                                        0,
+                                        16,
+                                        20,
+                                      ),
+                                      itemCount:
+                                          filtered.length,
+                                      itemBuilder:
+                                          (
+                                        context,
+                                        index,
+                                      ) {
+                                        return _bookingCard(
+                                          filtered[
+                                              index],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
